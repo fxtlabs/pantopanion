@@ -26,18 +26,26 @@ function to_mixed_number(value, max_denominator=64) =
     )
         [whole, (factor > 0 ? [numerator / factor, denominator / factor] : [0, 1] )];
 
+// It converts a value from millimeters to inches.
 function to_inches(value) =
     value / INCH_TO_MM;
 
+// It converts a value from inches to millimeters.
 function to_millimeters(value) =
     value * INCH_TO_MM;
 
+// Given a value in millimeters, it returns it as a printable string.
+// (E.g. 1.75 => "1.75mm")
 function as_millimeters(value) =
     str(value, "mm");
 
+// Given a value in inches, it returns a string formatted as decimal inches.
+// (E.g. 1.75 => "1.75\"")
 function as_decimal_inches(value) =
     str(value, "\"");
 
+// Given a value in inches, it returns a string formatted as fractional inches.
+// (E.g. 1.75 => "1-3/4\"")
 function as_fractional_inches(value) =
     let (
         mn = to_mixed_number(value),
