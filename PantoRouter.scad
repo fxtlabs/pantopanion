@@ -16,7 +16,7 @@ use <Math.scad>
 
 // Customizable parameters
 
-Template = "M&T"; // ["Dowel", "M&T"]
+Template = "M&T"; // ["Dowel", "M&T", "Calibration"]
 
 Inner_Bit = 0.375; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
 Outer_Bit = 0.5; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
@@ -403,30 +403,7 @@ module dowel_template(
     }
 }
 
-/*
-if (Template == "Dowel") {
-    dowel_template(
-        dowel_diameter=to_millimeters(Dowel_Diameter),
-        inner_guide_bearing=Inner_Guide_Bearing,
-        outer_guide_bearing=Outer_Guide_Bearing,
-        inner_bit=to_millimeters(Inner_Bit),
-        outer_bit=to_millimeters(Outer_Bit),
-        label_units=Label_Units);
-} else {
-    mt_template(
-        mortise_width=to_millimeters(Mortise_Width),
-        mortise_thickness=to_millimeters(Mortise_Thickness),
-        corner_radius=to_millimeters(Corner_Radius),
-        inner_guide_bearing=Inner_Guide_Bearing,
-        outer_guide_bearing=Outer_Guide_Bearing,
-        inner_bit=to_millimeters(Inner_Bit),
-        outer_bit=to_millimeters(Outer_Bit),
-        vertical_p=(Orientation == "V" ? true : false),
-        label_units=Label_Units);
-}
-*/
-
-module calibration_piece() {
+module calibration_template() {
     difference() {
         union() {
             translate([0, 0, template_height / 2]) cube([50, 30, template_height], center = true);
@@ -446,5 +423,25 @@ module calibration_piece() {
     }
 }
 
-calibration_piece();
-
+if (Template == "Dowel") {
+    dowel_template(
+        dowel_diameter=to_millimeters(Dowel_Diameter),
+        inner_guide_bearing=Inner_Guide_Bearing,
+        outer_guide_bearing=Outer_Guide_Bearing,
+        inner_bit=to_millimeters(Inner_Bit),
+        outer_bit=to_millimeters(Outer_Bit),
+        label_units=Label_Units);
+} else if(Template == "M&T") {
+    mt_template(
+        mortise_width=to_millimeters(Mortise_Width),
+        mortise_thickness=to_millimeters(Mortise_Thickness),
+        corner_radius=to_millimeters(Corner_Radius),
+        inner_guide_bearing=Inner_Guide_Bearing,
+        outer_guide_bearing=Outer_Guide_Bearing,
+        inner_bit=to_millimeters(Inner_Bit),
+        outer_bit=to_millimeters(Outer_Bit),
+        vertical_p=(Orientation == "V" ? true : false),
+        label_units=Label_Units);
+} else {
+    calibration_template();
+}
