@@ -139,27 +139,27 @@ module mortise_part(width, thickness, radius) {
     }
 }
 
-// Cylinder with a polygonal approximation that circumscribes it (rather
-// than being inscribed inside it). Good for subtractions.
+// Given the radius of a circle (or cylinder), return a new radius that would
+// yield a polygonal approximation that circumscribes the original circle.
+// Use it for subtracted shapes so that the resulting hole is as big as
+// requested.
 // References:
 // https://en.wikibooks.org/wiki/OpenSCAD_User_Manual/undersized_circular_objects
-module hole(height, radius) {
-    fudge = 1 / cos(180 / hole_fn);
-    cylinder(h=height ,r=radius*fudge, center=true, $fn=hole_fn);
-}
+function circumscribed(radius) =
+    let (n = segs(radius)) radius / cos(180 / n);
 
 module center_hole() {
-    // cylinder(h=template_height*2, d=center_hole_diameter, center=true);
-    hole(template_height*2, center_hole_diameter/2);
+    radius = circumscribed(center_hole_diameter / 2);
+    cylinder(h=template_height*2, r=radius, center=true);
 }
 
 module screw_hole() {
     countersink_radius = screw_countersink_diameter / 2;
     countersink_height =
         countersink_radius / tan(screw_countersink_angle / 2);
+    screw_hole_radius = circumscribed(screw_hole_diameter / 2);
     union() {
-        // cylinder(h=template_height*2, d=screw_hole_diameter, center=true);
-        hole(template_height*2, screw_hole_diameter/2);
+        cylinder(h=template_height*2, r=screw_hole_radius, center=true);
         translate([0, 0, bottom_height - countersink_height + eps])
             cylinder(countersink_height, r1=0, r2=countersink_radius, center=false);
     }
