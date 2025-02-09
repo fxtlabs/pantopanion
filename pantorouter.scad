@@ -12,7 +12,7 @@
 // - more consistent approach to deal with adjacent parts and epsilons
 // - haunched mortise and tenon
 
-use <Math.scad>
+use <math.scad>
 use <BOSL/math.scad>
 use <BOSL/shapes.scad>
 include <BOSL/constants.scad>
