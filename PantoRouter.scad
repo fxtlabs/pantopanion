@@ -13,6 +13,10 @@
 // - haunched mortise and tenon
 
 use <Math.scad>
+use <BOSL/math.scad>
+use <BOSL/shapes.scad>
+include <BOSL/constants.scad>
+
 
 // Customizable parameters
 
@@ -227,6 +231,7 @@ module registration_tab(length=10) {
     intrusion = width / 2;  // to make sure the printing does not overhang more than 45°
     extrusion = registration_tab_protrusion;
 
+    /*
     offset = (length - width) / 2;
     hull() {
         translate([offset, 0, 0]) cylinder(h=extrusion-eps, d1=width, d2=0, center=false);
@@ -234,6 +239,9 @@ module registration_tab(length=10) {
         translate([-offset, 0, -extrusion]) cylinder(h=extrusion-eps, d=width, center=false);
         translate([offset, 0, -extrusion]) cylinder(h=extrusion-eps, d=width, center=false);
     }
+    */
+    translate([0, 0, -extrusion])
+        narrowing_strut(w=width, l=length, wall=extrusion, ang=45);
 }
 
 module v_registration_tabs(length) {

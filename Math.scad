@@ -2,10 +2,6 @@
 
 INCH_TO_MM = 25.4;
 
-// Returns the sum of the values (Numbers) in the given vector.
-function sum(v, i = 0, r = 0) =
-    i < len(v) ? sum(v, i + 1, r + v[i]) : r;
-
 // greatest common divisor
 function gcd(a, b) =
     b == 0 ? a : gcd(b, a % b);
