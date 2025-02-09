@@ -9,7 +9,7 @@
 
 // TODO:
 // - add registration tabs for horizontal and vertical versions
-// - more consistent approach to deal with adjacent parts and epsilons
+// - adjust for printer slop
 // - haunched mortise and tenon
 
 use <math.scad>
@@ -79,7 +79,7 @@ module tenon_part(width, thickness, radius) {
     echo(dy, thickness, radius);
     d_r = taper / 2;
 
-    if (radius > 0) {
+    if (radius > eps) {
         // rounded ends
         hull() {
             translate([dx, dy, 0])
@@ -100,7 +100,7 @@ module tenon_part(width, thickness, radius) {
     } else {
         // square ends
         // The intersection is used to remove the bottom part of the hull
-        // because it is not tapered
+        // because that is not tapered
         intersection() {
             hull() {
                 translate([0, 0, template_height - eps / 2])
@@ -128,7 +128,7 @@ module mortise_part(width, thickness, radius) {
                     cylinder(h=template_height, r=radius, center=false);
                 translate([dx, dy, dz])
                     cylinder(h=template_height, r=radius, center=false);
-                if (dy > 0) {
+                if (dy > eps) {
                     translate([-dx, -dy, dz])
                         cylinder(h=template_height, r=radius, center=false);
                     translate([dx, -dy, dz])
@@ -240,7 +240,7 @@ module registration_tab(length=10) {
         translate([offset, 0, -extrusion]) cylinder(h=extrusion-eps, d=width, center=false);
     }
     */
-    translate([0, 0, -extrusion])
+    rotate([0, 0, 90]) translate([0, 0, -extrusion])
         narrowing_strut(w=width, l=length, wall=extrusion, ang=45);
 }
 
