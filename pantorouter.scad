@@ -277,8 +277,8 @@ function bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit
     
 module mt_label(label_text, width, top, bottom) {
     if (len(label_text) > 0) {
+        text_size = (top - bottom) * 0.7;
         dy = (top + bottom) / 2;
-        text_size = (top - bottom) / 2;
         tm = textmetrics(size=text_size, halign="center", valign="center", text=label_text);
         too_big_p = tm.size.x / tm.size.y > width / text_size;
         /* WARNING: use the following snippet if you do not want to use
@@ -287,7 +287,7 @@ module mt_label(label_text, width, top, bottom) {
         too_big_p = len(label_text) > (width / text_size) * 5 / 5.75;
         */
         color("blue") translate([0, dy, template_height]) {
-            linear_extrude(height=1, center=true) {
+            linear_extrude(height=1.2, center=true) {
                 if (too_big_p) {
                     resize([width, 0, 0], auto=[true, true, false])
                         text(size=text_size, halign="center", valign="center", text=label_text);
@@ -302,8 +302,8 @@ module mt_label(label_text, width, top, bottom) {
 module dowel_label(label_text, top, bottom) {
     n_chars = len(label_text);
     if (n_chars > 0) {
-        radius = bottom + (top - bottom) / 4;
-        text_size = (top - bottom) / 2;
+        text_size = (top - bottom) * 0.7;
+        radius = bottom + (top - bottom - text_size) / 2;
         widths = [for (c = label_text) textmetrics(size=text_size, halign="left", valign="baseline", text=c).advance.x];
         total_width = sum(widths);
         total_a = 180 * total_width / (PI * radius);
@@ -314,7 +314,7 @@ module dowel_label(label_text, top, bottom) {
         for(i = [0 : n_chars - 1]) {
             rotate([0, 0, start_as[i]])
                 translate([0, radius, template_height]) {
-                    linear_extrude(height=1, center=true) {
+                    linear_extrude(height=1.2, center=true) {
                         text(size=text_size, halign="left", valign="baseline", text=label_text[i]);
                     }
                 }
@@ -415,7 +415,7 @@ module calibration_template1() {
     difference() {
         union() {
             translate([0, 0, template_height / 2]) cube([50, 30, template_height], center = true);
-            mt_label(label_text="Calibration @ 50mm x 30mm", width=46, top=15, bottom=5);
+            mt_label(label_text="50mm x 30mm", width=46, top=15, bottom=5);
         }
         translate([0, 0, template_height / 2 + bottom_height]) hull() {
             translate([-15, 0, 0]) cube([10, 10, template_height], center=true);
@@ -427,7 +427,7 @@ module calibration_template1() {
         translate([5, 0, 0]) cylinder(h=template_height*2, d=center_hole_diameter, center=true);
         // Screw hole w/o correction for difference operation (and w/o countersink)
         translate([15, 0, 0]) cylinder(h=template_height*2, d=screw_hole_diameter, center=true);
-        mt_label(label_text="Calibration @ 50mm x 30mm", width=46, top=-5, bottom=-15);
+        mt_label(label_text="50mm x 30mm", width=46, top=-5, bottom=-15);
     }
 }
 
@@ -465,7 +465,7 @@ module calibration_template() {
         translate([5, 0, 0]) cylinder(h=template_height*2, d=center_hole_diameter, center=true);
         // Screw hole w/o correction for difference operation (and w/o countersink)
         translate([15, 0, 0]) cylinder(h=template_height*2, d=screw_hole_diameter, center=true);
-        mt_label(label_text="Calibration @ 50mm x 30mm", width=46, top=-5, bottom=-15);
+        mt_label(label_text="50mm x 30mm", width=46, top=-5, bottom=-15);
     }
 }
 
