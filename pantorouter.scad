@@ -9,7 +9,6 @@
 
 // TODO:
 // - add registration tabs for horizontal and vertical versions
-// - adjust for printer slop
 // - haunched mortise and tenon
 
 use <math.scad>
@@ -32,9 +31,9 @@ Label_Units = "f";  // [d:Decimal Inches, f:Fractional Inches, m:Millimeters]
 
 Orientation = "H"; // [H:Horizontal, V:Vertical]
 // in inches
-Mortise_Width = 2.5; // [0.25:0.125:4]
+Mortise_Width = 2.5; // [0.25:0.0625:4]
 // in inches
-Mortise_Thickness = 0.5; // [0.125:0.125:2]
+Mortise_Thickness = 0.5; // [0.125:0.0625:2]
 // in inches
 Corner_Radius = 0;   // [0:0.0625:1]
 
@@ -70,7 +69,10 @@ registration_tab_protrusion = 1.3;
 base_margin = 2;
 center_mark_height = 3;
 center_mark_depth = 0.5;
+text_margin = 4;
 
+hole_radius_adjust = 0.12;
+inner_radius_adjust = 0.08;
 eps = 0.01;
 
 module tenon_part(width, thickness, radius) {
@@ -149,15 +151,15 @@ function circumscribed(radius) =
     let (n = segs(radius)) radius / cos(180 / n);
 
 module center_hole() {
-    radius = circumscribed(center_hole_diameter / 2);
+    radius = circumscribed(center_hole_diameter / 2) + hole_radius_adjust;
     cylinder(h=template_height*2, r=radius, center=true);
 }
 
 module screw_hole() {
-    countersink_radius = screw_countersink_diameter / 2;
+    countersink_radius = screw_countersink_diameter / 2 + hole_radius_adjust;
     countersink_height =
         countersink_radius / tan(screw_countersink_angle / 2);
-    screw_hole_radius = circumscribed(screw_hole_diameter / 2);
+    screw_hole_radius = circumscribed(screw_hole_diameter / 2) + hole_radius_adjust;
     union() {
         cylinder(h=template_height*2, r=screw_hole_radius, center=true);
         translate([0, 0, bottom_height - countersink_height + eps])
@@ -342,7 +344,7 @@ module mt_template(
 
     inner_thickness = mortise_thickness > inner_bit ? ((mortise_thickness - inner_bit) * 2 + inner_guide_bearing) : inner_guide_bearing;
     inner_width = (mortise_width - inner_bit) * 2 + inner_guide_bearing;
-    inner_radius = max(0, min(2 * corner_radius, mortise_thickness) - inner_bit) + inner_guide_bearing / 2;
+    inner_radius = max(0, min(2 * corner_radius, mortise_thickness) - inner_bit) + inner_guide_bearing / 2 + inner_radius_adjust;
     
     difference() {
         tenon_part(width=outer_width, thickness=outer_thickness, radius=outer_radius);
@@ -358,7 +360,7 @@ module mt_template(
             translate([track_spacing, 0, 0]) registration_tab();
         }
     }
-    text_width = outer_width - 2 * max(outer_radius, base_margin) - taper;
+    text_width = outer_width - 2 * max(outer_radius, text_margin) - taper;
     text_top = (outer_thickness - taper) / 2;
     text_bottom = inner_thickness / 2;
     
@@ -382,7 +384,9 @@ module dowel_template(
     assert(inner_bit <= dowel_diameter, "The router bit used for the round mortise cannot be bigger than the mortise diameter!");
 
     outer_diameter = (dowel_diameter + outer_bit) * 2 - outer_guide_bearing;
-    inner_diameter = dowel_diameter > inner_bit ? ((dowel_diameter - inner_bit) * 2 + inner_guide_bearing) : inner_guide_bearing;
+    inner_diameter = circumscribed(
+        (dowel_diameter > inner_bit ? ((dowel_diameter - inner_bit) * 2 + inner_guide_bearing) : inner_guide_bearing)
+    ) + inner_radius_adjust * 2;
     
     tab_width = (outer_diameter - nut_clearance) / 2 - base_margin;
     tab_position = ((outer_diameter / 2 - base_margin) + nut_clearance / 2) / 2;
