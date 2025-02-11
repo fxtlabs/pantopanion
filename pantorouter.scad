@@ -304,8 +304,10 @@ module mt_label(label_text, width, top, bottom) {
 module dowel_label(label_text, top, bottom) {
     n_chars = len(label_text);
     if (n_chars > 0) {
-        text_size = (top - bottom) * 0.7;
-        radius = bottom + (top - bottom - text_size) / 2;
+        opt_text_size = (top - bottom) * 0.7;
+        radius = bottom + (top - bottom - opt_text_size) / 2;
+        tm = textmetrics(size=opt_text_size, halign="center", valign="baseline", text=label_text);
+        text_size = opt_text_size * min(tm.size.x, PI * abs(radius)) / tm.size.x;
         widths = [for (c = label_text) textmetrics(size=text_size, halign="left", valign="baseline", text=c).advance.x];
         total_width = sum(widths);
         total_a = 180 * total_width / (PI * radius);
@@ -403,7 +405,7 @@ module dowel_template(
 
     text_top = (outer_diameter - taper) / 2;
     text_bottom = inner_diameter / 2;
-    top_label = str( "ø ", top_label_string(value=dowel_diameter, units=label_units)); // Unicode \u2300 for diameter symbol does not work
+    top_label = str( "ø", top_label_string(value=dowel_diameter, units=label_units)); // Unicode \u2300 for diameter symbol does not work
     dowel_label(label_text=top_label, top=text_top, bottom=text_bottom);
     bottom_label = bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);    
     dowel_label(label_text=bottom_label, top=-text_bottom, bottom=-text_top);
