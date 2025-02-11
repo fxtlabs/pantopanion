@@ -9,7 +9,6 @@
 
 // TODO:
 // - add registration tabs for horizontal and vertical versions
-// - add "V" label to vertical M&T templates
 // - make bottom label optional (when the text is small it does not print well)
 // - haunched mortise and tenon
 
@@ -353,8 +352,9 @@ module mt_template(
     text_bottom = inner_thickness / 2;
     top_label = str(
         top_label_string(value=mortise_width, units=label_units),
-        " x ",
-        top_label_string(value=mortise_thickness, units=label_units));
+        "\u00d7", // Unicode for vertically centered x
+        top_label_string(value=mortise_thickness, units=label_units),
+        (vertical_p ? "-V" : ""));
     bottom_label = bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
     
     difference() {
@@ -367,7 +367,7 @@ module mt_template(
 
         // registration_tabs
         if (vertical_p) {
-            v_registration_tabs(8);
+            v_registration_tabs(6);
         } else {
             // MISSING
             // translate([-track_spacing, 0, 0]) registration_tab();
@@ -380,7 +380,7 @@ module mt_template(
     // Include the registration tabs for printing 
     if (vertical_p) {
         translate([0, outer_thickness + 10, registration_tab_protrusion])
-            v_registration_tabs(8);
+            v_registration_tabs(6);
     } else {
         // MISSING
     }
