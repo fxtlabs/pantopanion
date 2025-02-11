@@ -9,7 +9,6 @@
 
 // TODO:
 // - add registration tabs for horizontal and vertical versions
-// - make bottom label optional (when the text is small it does not print well)
 // - haunched mortise and tenon
 
 use <math.scad>
@@ -27,6 +26,7 @@ Outer_Bit = 0.5; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\
 Inner_Guide_Bearing = 10;   // [6:6 mm, 10:10 mm, 12:12 mm, 15:15 mm, 22:22 mm, 35:35 mm, 48:48 mm]
 Outer_Guide_Bearing = 15;   // [6:6 mm, 10:10 mm, 12:12 mm, 15:15 mm, 22:22 mm, 35:35 mm, 48:48 mm]
 Label_Units = "f";  // [d:Decimal Inches, f:Fractional Inches, m:Millimeters]
+Bottom_Label = true;
 
 /* [ Mortise And Tenon Template ] */
 
@@ -335,7 +335,8 @@ module mt_template(
     inner_bit,
     outer_bit,
     vertical_p=false,
-    label_units) {
+    label_units,
+    bottom_label_p) {
     assert(inner_bit <= mortise_thickness, "The router bit used for the mortise cannot be bigger than the mortise thickness!");
     assert(inner_bit <= mortise_width, "The router bit used for the mortise cannot be bigger than the mortise width!");
     assert(mortise_thickness <= mortise_width, "The mortise width cannot be smaller than the mortise thickness!");
@@ -355,7 +356,7 @@ module mt_template(
         "\u00d7", // Unicode for vertically centered x
         top_label_string(value=mortise_thickness, units=label_units),
         (vertical_p ? "-V" : ""));
-    bottom_label = bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
+    bottom_label = bottom_label_p ? bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) : "";
     
     difference() {
         tenon_part(width=outer_width, thickness=outer_thickness, radius=outer_radius);
@@ -392,7 +393,8 @@ module dowel_template(
     outer_guide_bearing,
     inner_bit,
     outer_bit,
-    label_units) {
+    label_units,
+    bottom_label_p) {
     assert(inner_bit <= dowel_diameter, "The router bit used for the round mortise cannot be bigger than the mortise diameter!");
 
     outer_diameter = (dowel_diameter + outer_bit) * 2 - outer_guide_bearing;
@@ -405,7 +407,7 @@ module dowel_template(
     text_top = (outer_diameter - taper) / 2;
     text_bottom = inner_diameter / 2;
     top_label = str( "ø", top_label_string(value=dowel_diameter, units=label_units)); // Unicode \u2300 for diameter symbol does not work
-    bottom_label = bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit); 
+    bottom_label = bottom_label_p ? bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) : ""; 
     
     difference() {
         cylinder(h=template_height, d1=outer_diameter+taper, d2=outer_diameter-taper, center=false);
@@ -492,7 +494,8 @@ if (Template == "Dowel") {
         outer_guide_bearing=Outer_Guide_Bearing,
         inner_bit=to_millimeters(Inner_Bit),
         outer_bit=to_millimeters(Outer_Bit),
-        label_units=Label_Units);
+        label_units=Label_Units,
+        bottom_label_p=Bottom_Label);
 } else if(Template == "M&T") {
     mt_template(
         mortise_width=to_millimeters(Mortise_Width),
@@ -503,7 +506,8 @@ if (Template == "Dowel") {
         inner_bit=to_millimeters(Inner_Bit),
         outer_bit=to_millimeters(Outer_Bit),
         vertical_p=(Orientation == "V" ? true : false),
-        label_units=Label_Units);
+        label_units=Label_Units,
+        bottom_label_p=Bottom_Label);
 } else {
     calibration_template();
 }
