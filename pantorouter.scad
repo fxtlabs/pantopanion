@@ -9,6 +9,8 @@
 
 // TODO:
 // - add registration tabs for horizontal and vertical versions
+// - add "V" label to vertical M&T templates
+// - make bottom label optional (when the text is small it does not print well)
 // - haunched mortise and tenon
 
 use <math.scad>
@@ -72,7 +74,7 @@ center_mark_depth = 0.5;
 text_margin = 4;
 
 hole_radius_adjust = 0.12;
-inner_radius_adjust = 0.08;
+inner_radius_adjust = 0.10;
 eps = 0.01;
 
 module tenon_part(width, thickness, radius) {
@@ -249,13 +251,13 @@ module registration_tab(length=10) {
 module v_registration_tabs(length) {
     rotate([0, 0, 90]) {
         translate([-10, track_spacing, 0])
-            registration_tab(10);
+            registration_tab(length);
         translate([10, track_spacing, 0])
-            registration_tab(10);
+            registration_tab(length);
         translate([-10, -track_spacing, 0])
-            registration_tab(10);
+            registration_tab(length);
         translate([10, -track_spacing, 0])
-            registration_tab(10);
+            registration_tab(length);
     }
 }
 
@@ -289,12 +291,12 @@ module mt_label(label_text, width, top, bottom) {
         too_big_p = len(label_text) > (width / text_size) * 5 / 5.75;
         */
         color("blue") translate([0, dy, template_height]) {
-            linear_extrude(height=1.2, center=true) {
+            linear_extrude(height=0.8, center=true) {
                 if (too_big_p) {
                     resize([width, 0, 0], auto=[true, true, false])
                         text(size=text_size, halign="center", valign="center", text=label_text);
                 } else {
-                    text(size=text_size, halign="center", valign="center", text=label_text);
+                    text(size=text_size, halign="center", valign="center", font=":style=Bold", text=label_text);
                 }
             }
         }
@@ -314,12 +316,11 @@ module dowel_label(label_text, top, bottom) {
         start_a = total_a / 2;
         da = total_a / total_width;
         start_as = [for (a = start_a, i = 0; i < len(widths); a = a - da * widths[i], i = i + 1) a];
-        color("blue")
         for(i = [0 : n_chars - 1]) {
             rotate([0, 0, start_as[i]])
                 translate([0, radius, template_height]) {
-                    linear_extrude(height=1.2, center=true) {
-                        text(size=text_size, halign="left", valign="baseline", text=label_text[i]);
+                    linear_extrude(height=0.8, center=true) {
+                        text(size=text_size, halign="left", valign="baseline", font=":style=Bold", text=label_text[i]);
                     }
                 }
         }
@@ -347,6 +348,14 @@ module mt_template(
     inner_thickness = mortise_thickness > inner_bit ? ((mortise_thickness - inner_bit) * 2 + inner_guide_bearing) : inner_guide_bearing;
     inner_width = (mortise_width - inner_bit) * 2 + inner_guide_bearing;
     inner_radius = max(0, min(2 * corner_radius, mortise_thickness) - inner_bit) + inner_guide_bearing / 2 + inner_radius_adjust;
+    text_width = outer_width - 2 * max(outer_radius, text_margin) - taper;
+    text_top = (outer_thickness - taper) / 2;
+    text_bottom = inner_thickness / 2;
+    top_label = str(
+        top_label_string(value=mortise_width, units=label_units),
+        " x ",
+        top_label_string(value=mortise_thickness, units=label_units));
+    bottom_label = bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
     
     difference() {
         tenon_part(width=outer_width, thickness=outer_thickness, radius=outer_radius);
@@ -354,26 +363,27 @@ module mt_template(
         center_marks(width=outer_width, thickness=outer_thickness, vertical_p=vertical_p);
         holes(width=inner_width, thickness=inner_thickness, vertical_p=vertical_p);
 
+        mt_label(label_text=bottom_label, width=text_width, top=-text_bottom, bottom=-text_top);
+
         // registration_tabs
         if (vertical_p) {
-            v_registration_tabs(10);
+            v_registration_tabs(8);
         } else {
-            translate([-track_spacing, 0, 0]) registration_tab();
-            translate([track_spacing, 0, 0]) registration_tab();
+            // MISSING
+            // translate([-track_spacing, 0, 0]) registration_tab();
+            // translate([track_spacing, 0, 0]) registration_tab();
         }
     }
-    text_width = outer_width - 2 * max(outer_radius, text_margin) - taper;
-    text_top = (outer_thickness - taper) / 2;
-    text_bottom = inner_thickness / 2;
     
-    top_label = str(
-        top_label_string(value=mortise_width, units=label_units),
-        " x ",
-        top_label_string(value=mortise_thickness, units=label_units));
     mt_label(label_text=top_label, width=text_width, top=text_top, bottom=text_bottom);
-
-    bottom_label = bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
-    mt_label(label_text=bottom_label, width=text_width, top=-text_bottom, bottom=-text_top);
+ 
+    // Include the registration tabs for printing 
+    if (vertical_p) {
+        translate([0, outer_thickness + 10, registration_tab_protrusion])
+            v_registration_tabs(8);
+    } else {
+        // MISSING
+    }
 }
 
 module dowel_template(
@@ -392,6 +402,11 @@ module dowel_template(
     
     tab_width = (outer_diameter - nut_clearance) / 2 - base_margin;
     tab_position = ((outer_diameter / 2 - base_margin) + nut_clearance / 2) / 2;
+    text_top = (outer_diameter - taper) / 2;
+    text_bottom = inner_diameter / 2;
+    top_label = str( "ø", top_label_string(value=dowel_diameter, units=label_units)); // Unicode \u2300 for diameter symbol does not work
+    bottom_label = bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit); 
+    
     difference() {
         cylinder(h=template_height, d1=outer_diameter+taper, d2=outer_diameter-taper, center=false);
         translate([0, 0, bottom_height])
@@ -401,15 +416,10 @@ module dowel_template(
         screw_hole();
         translate([tab_position, 0, 0]) registration_tab(length=tab_width);
         translate([-tab_position, 0, 0]) registration_tab(length=tab_width);
+        dowel_label(label_text=bottom_label, top=-text_bottom, bottom=-text_top);
     }
-
-    text_top = (outer_diameter - taper) / 2;
-    text_bottom = inner_diameter / 2;
-    top_label = str( "ø", top_label_string(value=dowel_diameter, units=label_units)); // Unicode \u2300 for diameter symbol does not work
     dowel_label(label_text=top_label, top=text_top, bottom=text_bottom);
-    bottom_label = bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);    
-    dowel_label(label_text=bottom_label, top=-text_bottom, bottom=-text_top);
-    
+  
     // Include the registration tabs for printing
     translate([0, outer_diameter / 2 + 10, registration_tab_protrusion]) {
         translate([tab_position, 0, 0]) registration_tab(length=tab_width);
