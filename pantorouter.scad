@@ -37,7 +37,7 @@ include <BOSL/constants.scad>
 
 // Customizable parameters
 
-Template = "M&T"; // ["Dowel", "M&T", "Std Dowel", "Std M&T", "Calibration"]
+Template = "M&T"; // ["Dowel", "M&T", "Std Dowel", "Std M&T", "Centering Pin", "Calibration"]
 
 Inner_Bit = 0.375; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
 Outer_Bit = 0.5; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
@@ -92,6 +92,29 @@ text_margin = 4;
 hole_radius_adjust = 0.12;
 inner_radius_adjust = 0.10;
 eps = 0.01;
+
+module centering_pin() {
+    adj = 0.2;
+    handle_h = 10;
+    handle_d = 12;
+    shaft_h = 15;
+    shaft_d = center_hole_diameter + adj;
+    pin_h = base_height;
+    pin_d = screw_hole_diameter + adj;
+    tip_h = 3;
+    tip_d = 2;
+    // handle
+    cylinder(h=handle_h, d=handle_d, center=false, $fn=8);
+    // shaft
+    translate([0, 0, handle_h-eps])
+        cylinder(h=shaft_h+eps, d=shaft_d, center=false);
+    translate([0, 0, handle_h+shaft_h-eps]) hull() {
+        // pin
+        cylinder(h=2*eps, d=pin_d, center=true);
+        translate([0, 0, pin_h])
+            cylinder(h=tip_h, d1=pin_d, d2=tip_d, center=false);
+    }
+}
 
 module tenon_part(width, thickness, radius) {
     dx = width / 2 - radius;
@@ -614,6 +637,9 @@ if (Template == "Dowel") {
         vertical_p=(Orientation == "V" ? true : false),
         label_units=Label_Units,
     );
+} else if (Template == "Centering Pin") {
+    centering_pin();
 } else {
     calibration_template();
 }
+
