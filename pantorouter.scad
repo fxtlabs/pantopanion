@@ -8,7 +8,27 @@
 // Height and depth refer to the z axis.
 
 // TODO:
+// - Make top and bottom labels customizable; "" means no label; "default"
+//   means system-generated label; otherwise, user defined
+// - Make top and bottom labels scalable, both up and down so they can be
+//   visually fit to the space
+// - Make center hole optional (default is on)
+// - Make registration tabs optional (default is on)
+// - Make center marks optional (default is on) because they can cause
+//   printing artifacts 
 // - add registration tabs for horizontal and vertical versions
+//   Take hole() apart in order to access the holes placement
+// - consider adding flanges when the holes do not fit inside the
+//   mortise part (should they extend vertically or horizontally?
+//   Horizontally for vertical templates, but harder to say for horizontal
+//   templates; I would go for vertically so they are not in the way of
+//   a lineup of templates (which would not stack vertically because they
+//   would be limited to the tracks spacing).
+//   Make flanges a user option, independent on whether the mortise part
+//   has space for the holes or not.
+// - How about giving the user control of all the holes? Nice and easy and
+//   more flexible. And no need for complex layout and monolitic code.
+
 // - haunched mortise and tenon
 
 use <math.scad>
@@ -79,7 +99,6 @@ eps = 0.01;
 module tenon_part(width, thickness, radius) {
     dx = width / 2 - radius;
     dy = thickness / 2 - radius;
-    echo(dy, thickness, radius);
     d_r = taper / 2;
 
     if (radius > eps) {
@@ -284,7 +303,7 @@ module mt_label(label_text, width, top, bottom) {
         dy = (top + bottom) / 2;
         tm = textmetrics(size=text_size, halign="center", valign="center", text=label_text);
         too_big_p = tm.size.x / tm.size.y > width / text_size;
-        /* WARNING: use the following snippet if you do not want to use
+        /* NOTE: use the following snippet if you do not want to use
            the experimental textmetrics() function.
         // The average ratio of height to width of characters is 6:5
         too_big_p = len(label_text) > (width / text_size) * 5 / 5.75;
@@ -348,9 +367,12 @@ module mt_template(
     inner_thickness = mortise_thickness > inner_bit ? ((mortise_thickness - inner_bit) * 2 + inner_guide_bearing) : inner_guide_bearing;
     inner_width = (mortise_width - inner_bit) * 2 + inner_guide_bearing;
     inner_radius = max(0, min(2 * corner_radius, mortise_thickness) - inner_bit) + inner_guide_bearing / 2 + inner_radius_adjust;
-    text_width = outer_width - 2 * max(outer_radius, text_margin) - taper;
+
     text_top = (outer_thickness - taper) / 2;
     text_bottom = inner_thickness / 2;
+    r = outer_radius > 0 ? outer_radius * (1 - sin(acos((0.85 * text_top + 0.15 * text_bottom) / outer_radius))) : 0;
+    echo(r);
+    text_width = outer_width - 2 * max(r, text_margin) - taper;
     top_label = str(
         top_label_string(value=mortise_width, units=label_units),
         "\u00d7", // Unicode for vertically centered x
