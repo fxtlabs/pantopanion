@@ -8,14 +8,6 @@
 // Height and depth refer to the z axis.
 
 // TODO:
-// - Make top and bottom labels customizable; "" means no label; "default"
-//   means system-generated label; otherwise, user defined
-// - Make top and bottom labels scalable, both up and down so they can be
-//   visually fit to the space
-// - Make center hole optional (default is on)
-// - Make registration tabs optional (default is on)
-// - Make center marks optional (default is on) because they can cause
-//   printing artifacts 
 // - consider adding flanges when the holes do not fit inside the
 //   mortise part (should they extend vertically or horizontally?
 //   Horizontally for vertical templates, but harder to say for horizontal
@@ -24,9 +16,6 @@
 //   would be limited to the tracks spacing).
 //   Make flanges a user option, independent on whether the mortise part
 //   has space for the holes or not.
-// - How about giving the user control of all the holes? Nice and easy and
-//   more flexible. And no need for complex layout and monolitic code.
-
 // - haunched mortise and tenon
 
 use <math.scad>
@@ -320,9 +309,9 @@ function bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit
     )
         str(mortise_s, " ", tenon_s);
     
-module mt_label(label_text, width, top, bottom) {
+module mt_label(label_text, width, height=0, top, bottom) {
     if (len(label_text) > 0) {
-        text_size = (top - bottom) * 0.7;
+        text_size = height > 0 ? height : (top - bottom) * 0.7;
         dy = (top + bottom) / 2;
         tm = textmetrics(size=text_size, halign="center", valign="center", text=label_text);
         too_big_p = tm.size.x / tm.size.y > width / text_size;
@@ -393,7 +382,9 @@ module mt_template(
 
     text_top = (outer_thickness - taper) / 2;
     text_bottom = inner_thickness / 2;
-    r = outer_radius > 0 ? outer_radius * (1 - sin(acos((0.85 * text_top + 0.15 * text_bottom) / outer_radius))) : 0;
+    text_factor = 0.7;
+    text_size = (text_top - text_bottom) * text_factor;
+    r = outer_radius > 0 ? 0.5 * outer_thickness * (1 - sin(acos(((text_factor + 0.5 * (1 - text_factor)) * text_top + 0.5 * (1 -text_factor) * text_bottom) / (outer_thickness / 2)))) : 0;
     echo(r);
     text_width = outer_width - 2 * max(r, text_margin) - taper;
     top_label = str(
@@ -412,7 +403,7 @@ module mt_template(
             screw_hole();
         }
 
-        mt_label(label_text=bottom_label, width=text_width, top=-text_bottom, bottom=-text_top);
+        mt_label(label_text=bottom_label, width=text_width, height=text_size, top=-text_bottom, bottom=-text_top);
 
         // registration_tabs
         difference() {
@@ -424,7 +415,7 @@ module mt_template(
         }
     }
     
-    mt_label(label_text=top_label, width=text_width, top=text_top, bottom=text_bottom);
+    mt_label(label_text=top_label, width=text_width, height=text_size, top=text_top, bottom=text_bottom);
  
     // Include the registration tabs for printing 
     translate([0, (outer_thickness + taper + (vertical_p ? outer_thickness + taper - 2 * registration_tab_spacer : registration_tab_thickness)) / 2 + registration_tab_spacer, registration_tab_protrusion])
@@ -496,9 +487,11 @@ module dowel_template(
             }
         }
         
-        dowel_label(label_text=bottom_label, top=-text_bottom, bottom=-text_top);
+        color("blue")
+            dowel_label(label_text=bottom_label, top=-text_bottom, bottom=-text_top);
     }
-    dowel_label(label_text=top_label, top=text_top, bottom=text_bottom);
+    color("blue")
+        dowel_label(label_text=top_label, top=text_top, bottom=text_bottom);
   
     // Include the registration tabs for printing
     translate([0, (outer_diameter + taper + registration_tab_thickness) / 2 + registration_tab_spacer, registration_tab_protrusion])
