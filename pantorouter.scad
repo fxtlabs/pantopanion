@@ -37,7 +37,7 @@ include <BOSL/constants.scad>
 
 // Customizable parameters
 
-Template = "M&T"; // ["Dowel", "M&T", "Calibration"]
+Template = "M&T"; // ["Dowel", "M&T", "Std Dowel", "Std M&T", "Calibration"]
 
 Inner_Bit = 0.375; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
 Outer_Bit = 0.5; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
@@ -414,6 +414,25 @@ module mt_template(
         }
 }
 
+module std_mt_template(
+    mortise_width,
+    vertical_p=false,
+    label_units) {
+    
+    half_inch = to_millimeters(0.5);
+    mt_template(
+        mortise_width=mortise_width,
+        mortise_thickness=half_inch,
+        corner_radius=half_inch/2,
+        inner_guide_bearing=10,
+        outer_guide_bearing=22,
+        inner_bit=half_inch,
+        outer_bit=half_inch,
+        vertical_p=vertical_p,
+        label_units=label_units,
+        bottom_label_p=false);
+}
+
 module dowel_template(
     dowel_diameter,
     inner_guide_bearing,
@@ -453,6 +472,7 @@ module dowel_template(
                 screw_hole_clearance();
             }
         }
+        
         dowel_label(label_text=bottom_label, top=-text_bottom, bottom=-text_top);
     }
     dowel_label(label_text=top_label, top=text_top, bottom=text_bottom);
@@ -461,6 +481,45 @@ module dowel_template(
     translate([0, (outer_diameter + taper + registration_tab_thickness) / 2 + registration_tab_spacer, registration_tab_protrusion])
         difference() {
             registration_tab(outer_diameter + taper);
+            position_holes(width=inner_diameter, thickness=inner_diameter, vertical_p=false) {
+                center_hole_clearance();
+                screw_hole_clearance();
+            }
+        }
+}
+
+module std_dowel_template() {
+    top_outer_diameter = 27; // measured
+    bottom_outer_diameter = 31; // measured
+    height = 12; // measured
+    // inner diameter fits 10mm guide bearing
+    inner_diameter = circumscribed(10) + 2 * inner_radius_adjust;
+    
+    difference() {
+        cylinder(h=height, d1=bottom_outer_diameter, d2=top_outer_diameter, center=false);
+        translate([0, 0, base_height])
+            cylinder(h=height, d=inner_diameter, center=false);
+
+        center_marks(width=bottom_outer_diameter - taper, thickness=bottom_outer_diameter - taper, vertical_p=false);
+        position_holes(width=inner_diameter, thickness=inner_diameter, vertical_p=false) {
+            center_hole();
+            screw_hole();
+        }
+
+        // registration_tabs
+        difference() {
+            registration_tab(bottom_outer_diameter);
+            position_holes(width=inner_diameter, thickness=inner_diameter, vertical_p=false) {
+                center_hole_clearance();
+                screw_hole_clearance();
+            }
+        }
+    }
+  
+    // Include the registration tabs for printing
+    translate([0, (bottom_outer_diameter + registration_tab_thickness) / 2 + registration_tab_spacer, registration_tab_protrusion])
+        difference() {
+            registration_tab(bottom_outer_diameter);
             position_holes(width=inner_diameter, thickness=inner_diameter, vertical_p=false) {
                 center_hole_clearance();
                 screw_hole_clearance();
@@ -547,6 +606,14 @@ if (Template == "Dowel") {
         vertical_p=(Orientation == "V" ? true : false),
         label_units=Label_Units,
         bottom_label_p=Bottom_Label);
+} else if (Template == "Std Dowel") {
+    std_dowel_template();
+} else if (Template == "Std M&T") {
+    std_mt_template(
+        mortise_width=to_millimeters(Mortise_Width),
+        vertical_p=(Orientation == "V" ? true : false),
+        label_units=Label_Units,
+    );
 } else {
     calibration_template();
 }
