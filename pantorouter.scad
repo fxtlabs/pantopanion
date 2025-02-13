@@ -8,7 +8,14 @@
 // Height and depth refer to the z axis.
 
 // TODO:
-// - consider adding flanges when the holes do not fit inside the
+// - Reduce slack in the mortise template (and maybe add some slack to
+//   the dowel template)
+// - The standard dowel template could have a tiny bit of taper in the
+//   mortise slot
+// - Guide bearings holder with labels (ø in mm and std router bit)
+// - Create a parametric spacer to enable proper spacing and centering
+//   of double M&Ts (vertical orientation)
+// - Consider adding flanges when the holes do not fit inside the
 //   mortise part (should they extend vertically or horizontally?
 //   Horizontally for vertical templates, but harder to say for horizontal
 //   templates; I would go for vertically so they are not in the way of
@@ -16,7 +23,10 @@
 //   would be limited to the tracks spacing).
 //   Make flanges a user option, independent on whether the mortise part
 //   has space for the holes or not.
-// - haunched mortise and tenon
+// - Haunched mortise and tenon
+// - Reorganize code into several files: customizer.scad, constants.scad,
+//   math.scad, utilities.scad, accessories.scad, templates.scad (maybe
+//   rename the project to PantoRouter Templates as well).
 
 use <math.scad>
 use <BOSL/math.scad>
@@ -57,7 +67,7 @@ $fs = 0.4;
 hole_fn = 64;
 
 template_height = 12;
-base_height = 3.5;
+base_height = 3.6;
 // The outside of the template tapers in by 2 mm all around; that amounts
 // to a slope of 10° on the standard M&T templates, but a slope of 12° on
 // the triple tenon template which has a flanged base before starting to
@@ -72,14 +82,16 @@ screw_countersink_angle = 90;
 min_screw_spacing = screw_countersink_diameter;
 track_spacing = 20;
 registration_tab_thickness = 4.2;
-registration_tab_protrusion = 1.3;
+registration_tab_intrusion = 0.6;
+registration_tab_protrusion = 1.2;
 registration_tab_spacer = 2.2;
 center_mark_height = 3;
-center_mark_depth = 0.5;
+center_mark_depth = 0.6;
 text_margin = 4;
+label_height = 0.4;
 
 hole_radius_adjust = 0.12;
-inner_radius_adjust = 0.10;
+inner_radius_adjust = 0.08;
 eps = 0.01;
 
 module centering_pin() {
@@ -148,25 +160,29 @@ module tenon_part(width, thickness, radius) {
 module mortise_part(width, thickness, radius) {
     depth = template_height - base_height;
     step_depth = depth / n_mortise_steps;
-    offset = width / 2 - radius;
+    offset = max(width / 2 - radius, 0);
     dy = thickness / 2 - radius;
-    union() {
-        for (i=[0:1:n_mortise_steps-1]) {
-            hull() {
-                dx=offset + mortise_step_width * i;
-                dz=base_height + step_depth * i;
-                translate([-dx, dy, dz])
-                    cylinder(h=template_height, r=radius, center=false);
-                translate([dx, dy, dz])
-                    cylinder(h=template_height, r=radius, center=false);
-                if (dy > eps) {
-                    translate([-dx, -dy, dz])
+    intersection() {
+        union() {
+            for (i=[0:1:n_mortise_steps-1]) {
+                hull() {
+                    dx=offset + mortise_step_width * i;
+                    dz=base_height + step_depth * i;
+                    translate([-dx, dy, dz])
                         cylinder(h=template_height, r=radius, center=false);
-                    translate([dx, -dy, dz])
+                    translate([dx, dy, dz])
                         cylinder(h=template_height, r=radius, center=false);
+                    if (dy > eps) {
+                        translate([-dx, -dy, dz])
+                            cylinder(h=template_height, r=radius, center=false);
+                        translate([dx, -dy, dz])
+                            cylinder(h=template_height, r=radius, center=false);
+                    }
                 }
             }
         }
+        translate([0, 0, template_height/2+eps])
+            cube([width+2*(n_mortise_steps*mortise_step_width), thickness, template_height+2*eps], center=true);
     }
 }
 
@@ -272,10 +288,10 @@ module center_marks(width, thickness, vertical_p) {
 module registration_tab(base_width) {
     width = base_width - 2 * registration_tab_spacer;
     thickness = registration_tab_thickness;
-    extrusion = registration_tab_protrusion;
+    wall = registration_tab_protrusion + registration_tab_intrusion;
 
-    rotate([0, 0, 90]) translate([0, 0, -extrusion])
-        narrowing_strut(w=thickness, l=width, wall=extrusion, ang=45);
+    rotate([0, 0, 90]) translate([0, 0, -registration_tab_protrusion])
+        narrowing_strut(w=thickness, l=width, wall=wall, ang=45);
 }
 
 module registration_tabs(base_width, base_thickness, vertical_p=false) {
@@ -304,8 +320,8 @@ function bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit
         outer_bit_s = as_fractional_inches(to_inches(outer_bit)),
         inner_guide_bearing_s = as_millimeters(inner_guide_bearing),
         outer_guide_bearing_s = as_millimeters(outer_guide_bearing),
-        mortise_s = str("M:", inner_bit_s, ",", inner_guide_bearing_s),
-        tenon_s = str("T:", outer_bit_s, ",", outer_guide_bearing_s)
+        mortise_s = str("M", inner_bit_s, "•", inner_guide_bearing),
+        tenon_s = str("T", outer_bit_s, "•", outer_guide_bearing)
     )
         str(mortise_s, " ", tenon_s);
     
@@ -321,7 +337,7 @@ module mt_label(label_text, width, height=0, top, bottom) {
         too_big_p = len(label_text) > (width / text_size) * 5 / 5.75;
         */
         color("blue") translate([0, dy, template_height]) {
-            linear_extrude(height=0.8, center=true) {
+            linear_extrude(height=label_height*2, center=true) {
                 if (too_big_p) {
                     resize([width, 0, 0], auto=[true, true, false])
                         text(size=text_size, halign="center", valign="center", text=label_text);
@@ -349,7 +365,7 @@ module dowel_label(label_text, top, bottom) {
         for(i = [0 : n_chars - 1]) {
             rotate([0, 0, start_as[i]])
                 translate([0, radius, template_height]) {
-                    linear_extrude(height=0.8, center=true) {
+                    linear_extrude(height=label_height*2, center=true) {
                         text(size=text_size, halign="left", valign="baseline", font=":style=Bold", text=label_text[i]);
                     }
                 }
@@ -460,7 +476,7 @@ module dowel_template(
     outer_diameter = (dowel_diameter + outer_bit) * 2 - outer_guide_bearing;
     inner_diameter = circumscribed(
         (dowel_diameter > inner_bit ? ((dowel_diameter - inner_bit) * 2 + inner_guide_bearing) : inner_guide_bearing)
-    ) + inner_radius_adjust * 2;
+    ) + hole_radius_adjust * 2;
     
     text_top = (outer_diameter - taper) / 2;
     text_bottom = inner_diameter / 2;
@@ -509,7 +525,7 @@ module std_dowel_template() {
     bottom_outer_diameter = 31; // measured
     height = 12; // measured
     // inner diameter fits 10mm guide bearing
-    inner_diameter = circumscribed(10) + 2 * inner_radius_adjust;
+    inner_diameter = circumscribed(10) + 2 * hole_radius_adjust;
     
     difference() {
         cylinder(h=height, d1=bottom_outer_diameter, d2=top_outer_diameter, center=false);
