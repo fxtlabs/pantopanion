@@ -8,8 +8,6 @@
 // Height and depth refer to the z axis.
 
 // TODO:
-// - Reduce slack in the mortise template (and maybe add some slack to
-//   the dowel template)
 // - The standard dowel template could have a tiny bit of taper in the
 //   mortise slot
 // - Guide bearings holder with labels (ø in mm and std router bit)
@@ -36,7 +34,7 @@ include <BOSL/constants.scad>
 
 // Customizable parameters
 
-Template = "M&T"; // ["Dowel", "M&T", "Std Dowel", "Std M&T", "Centering Pin", "Calibration"]
+Template = "M&T"; // ["Dowel", "M&T", "Std Dowel", "Std M&T", "Std M&T Spacer", "Centering Pin", "Calibration"]
 
 Inner_Bit = 0.375; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
 Outer_Bit = 0.5; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
@@ -44,6 +42,7 @@ Inner_Guide_Bearing = 10;   // [6:6 mm, 10:10 mm, 12:12 mm, 15:15 mm, 22:22 mm, 
 Outer_Guide_Bearing = 15;   // [6:6 mm, 10:10 mm, 12:12 mm, 15:15 mm, 22:22 mm, 35:35 mm, 48:48 mm]
 Label_Units = "f";  // [d:Decimal Inches, f:Fractional Inches, m:Millimeters]
 Bottom_Label = true;
+Registration_Tabs = true;
 
 /* [ Mortise And Tenon Template ] */
 
@@ -59,6 +58,10 @@ Corner_Radius = 0;   // [0:0.0625:1]
 
 // in inches
 Dowel_Diameter = 1; // [0.25:0.125:4]
+
+/* [ Mortise And Tenon Spacer Template ] */
+
+Mortises_Spacing = 1; // [0.75:0.0625:4]
 
 /* [Hidden] */
 
@@ -383,7 +386,8 @@ module mt_template(
     outer_bit,
     vertical_p=false,
     label_units,
-    bottom_label_p) {
+    bottom_label_p,
+    registration_tabs_p=true) {
     assert(inner_bit <= mortise_thickness, "The router bit used for the mortise cannot be bigger than the mortise thickness!");
     assert(inner_bit <= mortise_width, "The router bit used for the mortise cannot be bigger than the mortise width!");
     assert(mortise_thickness <= mortise_width, "The mortise width cannot be smaller than the mortise thickness!");
@@ -433,13 +437,15 @@ module mt_template(
     
     mt_label(label_text=top_label, width=text_width, height=text_size, top=text_top, bottom=text_bottom);
  
-    // Include the registration tabs for printing 
-    translate([0, (outer_thickness + taper + (vertical_p ? outer_thickness + taper - 2 * registration_tab_spacer : registration_tab_thickness)) / 2 + registration_tab_spacer, registration_tab_protrusion])
-        difference() {
-            registration_tabs(outer_width + taper, outer_thickness + taper, vertical_p);
-            position_holes(width=inner_width, thickness=inner_thickness, vertical_p=vertical_p) {
-                center_hole_clearance();
-                screw_hole_clearance();
+    if (registration_tabs_p) {
+        // Include the registration tabs for printing 
+        translate([0, (outer_thickness + taper + (vertical_p ? outer_thickness + taper - 2 * registration_tab_spacer : registration_tab_thickness)) / 2 + registration_tab_spacer, registration_tab_protrusion])
+            difference() {
+                registration_tabs(outer_width + taper, outer_thickness + taper, vertical_p);
+                position_holes(width=inner_width, thickness=inner_thickness, vertical_p=vertical_p) {
+                    center_hole_clearance();
+                    screw_hole_clearance();
+                }
             }
         }
 }
@@ -447,7 +453,8 @@ module mt_template(
 module std_mt_template(
     mortise_width,
     vertical_p=false,
-    label_units) {
+    label_units,
+    registration_tabs_p=true) {
     
     half_inch = to_millimeters(0.5);
     mt_template(
@@ -460,7 +467,8 @@ module std_mt_template(
         outer_bit=half_inch,
         vertical_p=vertical_p,
         label_units=label_units,
-        bottom_label_p=false);
+        bottom_label_p=false,
+        registration_tabs_p=registration_tabs_p);
 }
 
 module dowel_template(
@@ -470,7 +478,8 @@ module dowel_template(
     inner_bit,
     outer_bit,
     label_units,
-    bottom_label_p) {
+    bottom_label_p,
+    registration_tabs_p=true) {
     assert(inner_bit <= dowel_diameter, "The router bit used for the round mortise cannot be bigger than the mortise diameter!");
 
     outer_diameter = (dowel_diameter + outer_bit) * 2 - outer_guide_bearing;
@@ -508,19 +517,21 @@ module dowel_template(
     }
     color("blue")
         dowel_label(label_text=top_label, top=text_top, bottom=text_bottom);
-  
-    // Include the registration tabs for printing
-    translate([0, (outer_diameter + taper + registration_tab_thickness) / 2 + registration_tab_spacer, registration_tab_protrusion])
-        difference() {
-            registration_tab(outer_diameter + taper);
-            position_holes(width=inner_diameter, thickness=inner_diameter, vertical_p=false) {
-                center_hole_clearance();
-                screw_hole_clearance();
+
+    if (registration_tabs_p) {
+        // Include the registration tabs for printing
+        translate([0, (outer_diameter + taper + registration_tab_thickness) / 2 + registration_tab_spacer, registration_tab_protrusion])
+            difference() {
+                registration_tab(outer_diameter + taper);
+                position_holes(width=inner_diameter, thickness=inner_diameter, vertical_p=false) {
+                    center_hole_clearance();
+                    screw_hole_clearance();
+                }
             }
-        }
+    }
 }
 
-module std_dowel_template() {
+module std_dowel_template(registration_tabs_p=true) {
     top_outer_diameter = 27; // measured
     bottom_outer_diameter = 31; // measured
     height = 12; // measured
@@ -547,16 +558,18 @@ module std_dowel_template() {
             }
         }
     }
-  
-    // Include the registration tabs for printing
-    translate([0, (bottom_outer_diameter + registration_tab_thickness) / 2 + registration_tab_spacer, registration_tab_protrusion])
-        difference() {
-            registration_tab(bottom_outer_diameter);
-            position_holes(width=inner_diameter, thickness=inner_diameter, vertical_p=false) {
-                center_hole_clearance();
-                screw_hole_clearance();
+
+    if (registration_tabs_p) {
+        // Include the registration tabs for printing
+        translate([0, (bottom_outer_diameter + registration_tab_thickness) / 2 + registration_tab_spacer, registration_tab_protrusion])
+            difference() {
+                registration_tab(bottom_outer_diameter);
+                position_holes(width=inner_diameter, thickness=inner_diameter, vertical_p=false) {
+                    center_hole_clearance();
+                    screw_hole_clearance();
+                }
             }
-        }
+    }
 }
 
 module calibration_template1() {
@@ -617,6 +630,38 @@ module calibration_template() {
     }
 }
 
+module std_mt_spacer_template(distance) {
+    // Notice that "distance" refers to the center-to-center distance
+    // between the two mortises; on the PantoRouter templates, that is
+    // multiplied by two.
+    flange_radius = screw_countersink_diameter;
+    spacer_height = template_height / 2;
+    intersection() {
+        difference() {
+            union() {
+                hull () {
+                    translate([track_spacing, 0, -eps])
+                        cylinder(h=base_height+eps, r=flange_radius, center=false);
+                    translate([-track_spacing, 0, -eps])
+                        cylinder(h=base_height+eps, r=flange_radius, center=false);
+                }
+                translate([0, 0, spacer_height/2+eps])
+                    cube([2*track_spacing-12, (2*distance)-12, spacer_height+2*eps], center=true);
+            }
+            center_hole();
+            translate([track_spacing, 0, 0]) screw_hole();
+            translate([-track_spacing, 0, 0]) screw_hole();
+            translate([0, -distance, 0])
+                std_mt_template(mortise_width=2*track_spacing, vertical_p=true, label_units="f", registration_tabs_p=false);
+            translate([0, distance, 0])
+                std_mt_template(mortise_width=2*track_spacing, vertical_p=true, label_units="f", registration_tabs_p=false);
+        }
+        translate([0, 0, spacer_height/2+eps])
+            cube([(flange_radius+track_spacing)*2+eps, distance*2, spacer_height], center=true);
+    }
+}
+std_mt_spacer_template(to_millimeters(1/4 + 13/16));
+
 if (Template == "Dowel") {
     dowel_template(
         dowel_diameter=to_millimeters(Dowel_Diameter),
@@ -646,6 +691,8 @@ if (Template == "Dowel") {
         vertical_p=(Orientation == "V" ? true : false),
         label_units=Label_Units,
     );
+} else if (Template == "Std M&T Spacer") {
+    std_mt_spacer_template(distance=to_millimeters(Mortises_Spacing));
 } else if (Template == "Centering Pin") {
     centering_pin();
 } else {
