@@ -34,7 +34,7 @@ include <BOSL/constants.scad>
 
 // Customizable parameters
 
-Template = "M&T"; // ["Dowel", "M&T", "Std Dowel", "Std M&T", "Std M&T Spacer", "Centering Pin", "Calibration"]
+Template = "M&T"; // ["Dowel", "M&T", "Std Dowel", "Std M&T", "Double M&T", "Std M&T Spacer", "Centering Pin", "Calibration"]
 
 Inner_Bit = 0.375; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
 Outer_Bit = 0.5; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
@@ -71,6 +71,7 @@ hole_fn = 64;
 
 template_height = 12;
 base_height = 3.6;
+baseless_height = 10;
 // The outside of the template tapers in by 2 mm all around; that amounts
 // to a slope of 10° on the standard M&T templates, but a slope of 12° on
 // the triple tenon template which has a flanged base before starting to
@@ -120,7 +121,7 @@ module centering_pin() {
     }
 }
 
-module tenon_part(width, thickness, radius) {
+module tenon_part(height, width, thickness, radius) {
     dx = width / 2 - radius;
     dy = thickness / 2 - radius;
     d_r = taper / 2;
@@ -129,17 +130,17 @@ module tenon_part(width, thickness, radius) {
         // rounded ends
         hull() {
             translate([dx, dy, 0])
-                cylinder(h=template_height, r1=radius+d_r, r2=radius-d_r, center=false);
+                cylinder(h=height, r1=radius+d_r, r2=radius-d_r, center=false);
             if (dx > 0) {
                 translate([-dx, dy, 0])
-                    cylinder(h=template_height, r1=radius+d_r, r2=radius-d_r, center=false);
+                    cylinder(h=height, r1=radius+d_r, r2=radius-d_r, center=false);
             }
             if (dy > 0) {
                 translate([dx, -dy, 0])
-                    cylinder(h=template_height, r1=radius+d_r, r2=radius-d_r, center=false);
+                    cylinder(h=height, r1=radius+d_r, r2=radius-d_r, center=false);
                 if (dx > 0) {
                     translate([-dx, -dy, 0])
-                        cylinder(h=template_height, r1=radius+d_r, r2=radius-d_r, center=false);
+                        cylinder(h=height, r1=radius+d_r, r2=radius-d_r, center=false);
                 }
             }
         }
@@ -149,43 +150,42 @@ module tenon_part(width, thickness, radius) {
         // because that is not tapered
         intersection() {
             hull() {
-                translate([0, 0, template_height - eps / 2])
+                translate([0, 0, height - eps / 2])
                     cube([width-taper, thickness-taper, eps], center=true);
                 translate([0, 0, -eps / 2])
                     cube([width+taper, thickness+taper, eps], center=true);                    
             }
-            translate([0, 0, template_height])
-                cube([2 * width, 2 * thickness, 2 * template_height], center=true);
+            translate([0, 0, height])
+                cube([2 * width, 2 * thickness, 2 * height], center=true);
         }
     }
 }
 
-module mortise_part(width, thickness, radius) {
-    depth = template_height - base_height;
-    step_depth = depth / n_mortise_steps;
+module mortise_part(height,width, thickness, radius) {
+    step_height = height / n_mortise_steps;
     offset = max(width / 2 - radius, 0);
     dy = thickness / 2 - radius;
     intersection() {
         union() {
             for (i=[0:1:n_mortise_steps-1]) {
                 hull() {
-                    dx=offset + mortise_step_width * i;
-                    dz=base_height + step_depth * i;
+                    dx = offset + mortise_step_width * i;
+                    dz = step_height * i;
                     translate([-dx, dy, dz])
-                        cylinder(h=template_height, r=radius, center=false);
+                        cylinder(h=height, r=radius, center=false);
                     translate([dx, dy, dz])
-                        cylinder(h=template_height, r=radius, center=false);
+                        cylinder(h=height, r=radius, center=false);
                     if (dy > eps) {
                         translate([-dx, -dy, dz])
-                            cylinder(h=template_height, r=radius, center=false);
+                            cylinder(h=height, r=radius, center=false);
                         translate([dx, -dy, dz])
-                            cylinder(h=template_height, r=radius, center=false);
+                            cylinder(h=height, r=radius, center=false);
                     }
                 }
             }
         }
-        translate([0, 0, template_height/2+eps])
-            cube([width+2*(n_mortise_steps*mortise_step_width), thickness, template_height+2*eps], center=true);
+        translate([0, 0, height/2+eps])
+            cube([width+2*(n_mortise_steps*mortise_step_width), thickness, height+2*eps], center=true);
     }
 }
 
@@ -375,7 +375,87 @@ module dowel_label(label_text, top, bottom) {
         }
     }
 }   
-   
+
+module base_plate(width, thickness, radius) {
+    dx = width / 2 - radius;
+    dy = thickness / 2 - radius;
+    height = base_height;
+
+    if (radius > eps) {
+        // rounded ends
+        hull() {
+            translate([dx, dy, 0])
+                cylinder(h=height, r=radius, center=false);
+            translate([-dx, dy, 0])
+                cylinder(h=height, r=radius, center=false);
+            translate([dx, -dy, 0])
+                cylinder(h=height, r=radius, center=false);
+            translate([-dx, -dy, 0])
+                cylinder(h=height, r=radius, center=false);
+        }
+    } else {
+        // square ends
+        translate([0, 0, base_height/2])
+            cube([width, thickness, base_height], center=true);
+    }        
+}
+
+module double_mt_template(
+    distance,
+    mortise_width,
+    mortise_thickness,
+    corner_radius,
+    inner_guide_bearing,
+    outer_guide_bearing,
+    inner_bit,
+    outer_bit,
+    vertical_p=false,
+    label_units,
+    bottom_label_p,
+    registration_tabs_p=true) {
+    assert(inner_bit <= mortise_thickness, "The router bit used for the mortise cannot be bigger than the mortise thickness!");
+    assert(inner_bit <= mortise_width, "The router bit used for the mortise cannot be bigger than the mortise width!");
+    assert(mortise_thickness <= mortise_width, "The mortise width cannot be smaller than the mortise thickness!");
+
+    outer_thickness = (mortise_thickness + outer_bit) * 2 - outer_guide_bearing;
+    outer_width = (mortise_width + outer_bit) * 2 - outer_guide_bearing;
+    outer_radius = corner_radius > 0 ? (min(2 * corner_radius, mortise_thickness) + outer_bit - outer_guide_bearing / 2) : 0;
+
+    inner_thickness = mortise_thickness > inner_bit ? ((mortise_thickness - inner_bit) * 2 + inner_guide_bearing) : inner_guide_bearing;
+    inner_width = (mortise_width - inner_bit) * 2 + inner_guide_bearing;
+    inner_radius = max(0, min(2 * corner_radius, mortise_thickness) - inner_bit) + inner_guide_bearing / 2 + inner_radius_adjust;
+    
+    // First M&T
+    translate([0, distance, base_height-eps]) difference() {
+        tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
+        translate([0, 0, -eps])
+            mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
+    }
+    // Second M&T
+    translate([0, -distance, base_height-eps]) difference() {
+        tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
+        translate([0, 0, -eps])
+            mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
+    }
+    // Base Plate
+    difference() {
+        base_plate(width=outer_width+taper, thickness=outer_thickness+taper+2*distance, radius=outer_radius+taper/2);
+        position_holes(width=outer_width+taper, thickness=2*distance-(outer_thickness+taper), vertical_p=vertical_p) {
+            center_hole();
+            screw_hole();
+        }
+
+        // registration_tabs
+        difference() {
+            registration_tabs(outer_width+taper, outer_thickness+taper+2*distance, vertical_p=vertical_p);
+            position_holes(width=outer_width+taper, thickness=2*distance-(outer_thickness+taper), vertical_p=vertical_p) {
+                center_hole_clearance();
+                screw_hole_clearance();
+            }
+        }
+    }
+}
+
 module mt_template(
     mortise_width,
     mortise_thickness,
@@ -415,8 +495,9 @@ module mt_template(
     bottom_label = bottom_label_p ? bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) : "";
     
     difference() {
-        tenon_part(width=outer_width, thickness=outer_thickness, radius=outer_radius);
-        mortise_part(width=inner_width, thickness=inner_thickness, radius=inner_radius);
+        tenon_part(height=template_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
+        translate([0, 0, base_height])
+            mortise_part(height=template_height-base_height, width=inner_width, thickness=inner_thickness, radius=inner_radius);
         center_marks(width=outer_width, thickness=outer_thickness, vertical_p=vertical_p);
         position_holes(width=inner_width, thickness=inner_thickness, vertical_p=vertical_p) {
             center_hole();
@@ -660,7 +741,6 @@ module std_mt_spacer_template(distance) {
             cube([(flange_radius+track_spacing)*2+eps, distance*2, spacer_height], center=true);
     }
 }
-std_mt_spacer_template(to_millimeters(1/4 + 13/16));
 
 if (Template == "Dowel") {
     dowel_template(
@@ -683,6 +763,19 @@ if (Template == "Dowel") {
         vertical_p=(Orientation == "V" ? true : false),
         label_units=Label_Units,
         bottom_label_p=Bottom_Label);
+} else if(Template == "Double M&T") {
+    double_mt_template(
+        distance=to_millimeters(Mortises_Spacing),
+        mortise_width=to_millimeters(Mortise_Width),
+        mortise_thickness=to_millimeters(Mortise_Thickness),
+        corner_radius=to_millimeters(Corner_Radius),
+        inner_guide_bearing=Inner_Guide_Bearing,
+        outer_guide_bearing=Outer_Guide_Bearing,
+        inner_bit=to_millimeters(Inner_Bit),
+        outer_bit=to_millimeters(Outer_Bit),
+        vertical_p=(Orientation == "V" ? true : false),
+        label_units=Label_Units,
+        bottom_label_p=Bottom_Label);        
 } else if (Template == "Std Dowel") {
     std_dowel_template();
 } else if (Template == "Std M&T") {
@@ -698,4 +791,3 @@ if (Template == "Dowel") {
 } else {
     calibration_template();
 }
-
