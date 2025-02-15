@@ -400,6 +400,26 @@ module base_plate(width, thickness, radius) {
     }        
 }
 
+// Operator module.
+module complete_template(outer_width, outer_thickness, inner_width, inner_thickness, vertical_p) {
+    difference() {
+        children(0);
+        position_holes(width=inner_width+taper, thickness=inner_thickness, vertical_p=vertical_p) {
+            center_hole();
+            screw_hole();
+        }
+
+        // registration_tabs
+        difference() {
+            registration_tabs(outer_width, outer_thickness, vertical_p=vertical_p);
+            position_holes(width=inner_width, thickness=inner_thickness, vertical_p=vertical_p) {
+                center_hole_clearance();
+                screw_hole_clearance();
+            }
+        }
+    }
+}
+
 module double_mt_template(
     distance,
     mortise_width,
@@ -424,35 +444,27 @@ module double_mt_template(
     inner_thickness = mortise_thickness > inner_bit ? ((mortise_thickness - inner_bit) * 2 + inner_guide_bearing) : inner_guide_bearing;
     inner_width = (mortise_width - inner_bit) * 2 + inner_guide_bearing;
     inner_radius = max(0, min(2 * corner_radius, mortise_thickness) - inner_bit) + inner_guide_bearing / 2 + inner_radius_adjust;
-    
-    // First M&T
-    translate([0, distance, base_height-eps]) difference() {
-        tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
-        translate([0, 0, -eps])
-            mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
-    }
-    // Second M&T
-    translate([0, -distance, base_height-eps]) difference() {
-        tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
-        translate([0, 0, -eps])
-            mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
-    }
-    // Base Plate
-    difference() {
-        base_plate(width=outer_width+taper, thickness=outer_thickness+taper+2*distance, radius=outer_radius+taper/2);
-        position_holes(width=outer_width+taper, thickness=2*distance-(outer_thickness+taper), vertical_p=vertical_p) {
-            center_hole();
-            screw_hole();
-        }
 
-        // registration_tabs
-        difference() {
-            registration_tabs(outer_width+taper, outer_thickness+taper+2*distance, vertical_p=vertical_p);
-            position_holes(width=outer_width+taper, thickness=2*distance-(outer_thickness+taper), vertical_p=vertical_p) {
-                center_hole_clearance();
-                screw_hole_clearance();
-            }
+    complete_template(
+        outer_width=outer_width+taper,
+        outer_thickness=outer_thickness+taper+2*distance,
+        inner_width=outer_width+taper,
+        inner_thickness=2*distance-(outer_thickness+taper),
+        vertical_p=vertical_p) union() {
+        // First M&T
+        translate([0, distance, base_height-eps]) difference() {
+            tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
+            translate([0, 0, -eps])
+                mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
         }
+        // Second M&T
+        translate([0, -distance, base_height-eps]) difference() {
+            tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
+            translate([0, 0, -eps])
+                mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
+        }
+        // Base Plate
+        base_plate(width=outer_width+taper, thickness=outer_thickness+taper+2*distance, radius=outer_radius+taper/2);
     }
 }
 
@@ -494,30 +506,27 @@ module mt_template(
         (vertical_p ? "-V" : ""));
     bottom_label = bottom_label_p ? bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) : "";
     
-    difference() {
-        tenon_part(height=template_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
-        translate([0, 0, base_height])
-            mortise_part(height=template_height-base_height, width=inner_width, thickness=inner_thickness, radius=inner_radius);
-        center_marks(width=outer_width, thickness=outer_thickness, vertical_p=vertical_p);
-        position_holes(width=inner_width, thickness=inner_thickness, vertical_p=vertical_p) {
-            center_hole();
-            screw_hole();
-        }
+    complete_template(
+        outer_width=outer_width + taper,
+        outer_thickness=outer_thickness + taper,
+        inner_width=inner_width,
+        inner_thickness=inner_thickness,
+        vertical_p=vertical_p
+    ) {
+        union() {
+            difference() {
+                tenon_part(height=template_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
+                translate([0, 0, base_height])
+                    mortise_part(height=template_height-base_height, width=inner_width, thickness=inner_thickness, radius=inner_radius);
+                center_marks(width=outer_width, thickness=outer_thickness, vertical_p=vertical_p);
 
-        mt_label(label_text=bottom_label, width=text_width, height=text_size, top=-text_bottom, bottom=-text_top);
-
-        // registration_tabs
-        difference() {
-            registration_tabs(outer_width + taper, outer_thickness + taper, vertical_p=vertical_p);
-            position_holes(width=inner_width, thickness=inner_thickness, vertical_p=vertical_p) {
-                center_hole_clearance();
-                screw_hole_clearance();
+                mt_label(label_text=bottom_label, width=text_width, height=text_size, top=-text_bottom, bottom=-text_top);
             }
-        }
+            mt_label(label_text=top_label, width=text_width, height=text_size, top=text_top, bottom=text_bottom);
+         }
     }
     
-    mt_label(label_text=top_label, width=text_width, height=text_size, top=text_top, bottom=text_bottom);
- 
+
     if (registration_tabs_p) {
         // Include the registration tabs for printing 
         translate([0, (outer_thickness + taper + (vertical_p ? outer_thickness + taper - 2 * registration_tab_spacer : registration_tab_thickness)) / 2 + registration_tab_spacer, registration_tab_protrusion])
@@ -573,32 +582,30 @@ module dowel_template(
     top_label = str( "ø", top_label_string(value=dowel_diameter, units=label_units)); // Unicode \u2300 for diameter symbol does not work
     bottom_label = bottom_label_p ? bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) : ""; 
     
-    difference() {
-        cylinder(h=template_height, d1=outer_diameter+taper, d2=outer_diameter-taper, center=false);
-        translate([0, 0, base_height])
-            cylinder(h=template_height, d=inner_diameter, center=false);
+    complete_template(
+        outer_width=outer_diameter+taper,
+        outer_thickness=outer_diameter+taper,
+        inner_width=inner_diameter,
+        inner_thickness=inner_diameter,
+        vertical_p=false
+    ) {
+        union() {
+            difference() {
+                cylinder(h=template_height, d1=outer_diameter+taper, d2=outer_diameter-taper, center=false);
+                translate([0, 0, base_height])
+                    cylinder(h=template_height, d=inner_diameter, center=false);
 
-        center_marks(width=outer_diameter, thickness=outer_diameter, vertical_p=false);
-        position_holes(width=inner_diameter, thickness=inner_diameter, vertical_p=false) {
-            center_hole();
-            screw_hole();
-        }
-
-        // registration_tabs
-        difference() {
-            registration_tab(outer_diameter + taper);
-            position_holes(width=inner_diameter, thickness=inner_diameter, vertical_p=false) {
-                center_hole_clearance();
-                screw_hole_clearance();
-            }
-        }
+                center_marks(width=outer_diameter, thickness=outer_diameter, vertical_p=false);
         
-        color("blue")
-            dowel_label(label_text=bottom_label, top=-text_bottom, bottom=-text_top);
-    }
-    color("blue")
-        dowel_label(label_text=top_label, top=text_top, bottom=text_bottom);
+                color("blue")
+                    dowel_label(label_text=bottom_label, top=-text_bottom, bottom=-text_top);
+            }
+            color("blue")
+                dowel_label(label_text=top_label, top=text_top, bottom=text_bottom);
 
+        }
+    }
+ 
     if (registration_tabs_p) {
         // Include the registration tabs for printing
         translate([0, (outer_diameter + taper + registration_tab_thickness) / 2 + registration_tab_spacer, registration_tab_protrusion])
@@ -619,24 +626,19 @@ module std_dowel_template(registration_tabs_p=true) {
     // inner diameter fits 10mm guide bearing
     inner_diameter = circumscribed(10) + 2 * hole_radius_adjust;
     
-    difference() {
-        cylinder(h=height, d1=bottom_outer_diameter, d2=top_outer_diameter, center=false);
-        translate([0, 0, base_height])
-            cylinder(h=height, d=inner_diameter, center=false);
-
-        center_marks(width=bottom_outer_diameter - taper, thickness=bottom_outer_diameter - taper, vertical_p=false);
-        position_holes(width=inner_diameter, thickness=inner_diameter, vertical_p=false) {
-            center_hole();
-            screw_hole();
-        }
-
-        // registration_tabs
+    complete_template(
+        outer_width=bottom_outer_diameter,
+        outer_thickness=bottom_outer_diameter,
+        inner_width=inner_diameter,
+        inner_thickness=inner_diameter,
+        vertical_p=false
+    ) {
         difference() {
-            registration_tab(bottom_outer_diameter);
-            position_holes(width=inner_diameter, thickness=inner_diameter, vertical_p=false) {
-                center_hole_clearance();
-                screw_hole_clearance();
-            }
+            cylinder(h=height, d1=bottom_outer_diameter, d2=top_outer_diameter, center=false);
+            translate([0, 0, base_height])
+                cylinder(h=height, d=inner_diameter, center=false);
+
+            center_marks(width=bottom_outer_diameter - taper, thickness=bottom_outer_diameter - taper, vertical_p=false);
         }
     }
 
