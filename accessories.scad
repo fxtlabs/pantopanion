@@ -1,3 +1,6 @@
+// TODO:
+// - Guide bearings holder with labels (ø in mm and std router bit)
+
 use <math.scad>
 include <constants.scad>
 

@@ -8,23 +8,12 @@
 // Height and depth refer to the z axis.
 
 // TODO:
+// - Bring layout logic into position_holes()
 // - The standard dowel template could have a tiny bit of taper in the
 //   mortise slot
-// - Guide bearings holder with labels (ø in mm and std router bit)
 // - Create a parametric spacer to enable proper spacing and centering
 //   of double M&Ts (vertical orientation)
-// - Consider adding flanges when the holes do not fit inside the
-//   mortise part (should they extend vertically or horizontally?
-//   Horizontally for vertical templates, but harder to say for horizontal
-//   templates; I would go for vertically so they are not in the way of
-//   a lineup of templates (which would not stack vertically because they
-//   would be limited to the tracks spacing).
-//   Make flanges a user option, independent on whether the mortise part
-//   has space for the holes or not.
 // - Haunched mortise and tenon
-// - Reorganize code into several files: customizer.scad, constants.scad,
-//   math.scad, utilities.scad, accessories.scad, templates.scad (maybe
-//   rename the project to PantoRouter Templates as well).
 
 use <math.scad>
 include <constants.scad>
@@ -179,8 +168,12 @@ function settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, oute
     let (
         inner_bit_s = as_fractional_inches(to_inches(inner_bit)),
         outer_bit_s = as_fractional_inches(to_inches(outer_bit)),
+        /* Unfortunately, there isn't enough space to properly label
+           the guide bearing diameter with the "mm" unit without
+           hurting readability. At least not with a 0.4 mm print nozzle.
         inner_guide_bearing_s = as_millimeters(inner_guide_bearing),
         outer_guide_bearing_s = as_millimeters(outer_guide_bearing),
+        */
         mortise_s = str("M", inner_bit_s, "•", inner_guide_bearing),
         tenon_s = str("T", outer_bit_s, "•", outer_guide_bearing)
     )
@@ -411,7 +404,7 @@ module mt_template(
                 translate([0, -(outer_thickness-taper+inner_thickness)/4, template_height])
                     label_part(bottom_label_text, label_bounds);
             }
-         }
+        }
     }
 }
 
@@ -434,6 +427,52 @@ module std_mt_template(
         label_units=label_units,
         bottom_label_p=false,
         registration_tabs_p=registration_tabs_p);
+}
+
+
+module baseless_mt_template(
+    mortise_width,
+    mortise_thickness,
+    corner_radius,
+    inner_guide_bearing,
+    outer_guide_bearing,
+    inner_bit,
+    outer_bit,
+    top_label_text,
+    bottom_label_text) {
+    assert(inner_bit <= mortise_thickness, "The router bit used for the mortise cannot be bigger than the mortise thickness!");
+    assert(inner_bit <= mortise_width, "The router bit used for the mortise cannot be bigger than the mortise width!");
+    assert(mortise_thickness <= mortise_width, "The mortise width cannot be smaller than the mortise thickness!");
+
+    outer_thickness = (mortise_thickness + outer_bit) * 2 - outer_guide_bearing;
+    outer_width = (mortise_width + outer_bit) * 2 - outer_guide_bearing;
+    outer_radius = corner_radius > 0 ? (min(2 * corner_radius, mortise_thickness) + outer_bit - outer_guide_bearing / 2) : 0;
+
+    inner_thickness = mortise_thickness > inner_bit ? ((mortise_thickness - inner_bit) * 2 + inner_guide_bearing) : inner_guide_bearing;
+    inner_width = (mortise_width - inner_bit) * 2 + inner_guide_bearing;
+    inner_radius = max(0, min(2 * corner_radius, mortise_thickness) - inner_bit) + inner_guide_bearing / 2 + inner_radius_adjust;
+
+    label_bounds = mt_label_bounds(
+        outer_width=outer_width,
+        outer_thickness=outer_thickness,
+        outer_radius=outer_radius,
+        inner_thickness=inner_thickness);
+
+    union() {
+        difference() {
+            tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
+            translate([0, 0, base_height])
+                mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
+        }
+        if (len(top_label_text) > 0) {
+            translate([0, (outer_thickness-taper+inner_thickness)/4, baseless_height])
+                label_part(top_label_text, label_bounds);
+        }
+        if (len(bottom_label_text) > 0) {
+            translate([0, -(outer_thickness-taper+inner_thickness)/4, baseless_height])
+                label_part(bottom_label_text, label_bounds);
+        }
+    }
 }
 
 
@@ -467,11 +506,9 @@ module double_mt_template(
         outer_thickness=outer_thickness,
         outer_radius=outer_radius,
         inner_thickness=inner_thickness);
-    top_label_text = mt_size_text(mortise_width, mortise_thickness, vertical_p, label_units);
-    bottom_label_text = settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
-    
-    distance_label_text = 
-        str(">", from_value_with_units(distance, label_units), "<");
+    mt_size_label_text = mt_size_text(mortise_width, mortise_thickness, vertical_p, label_units);
+    settings_label_text = settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
+    distance_label_text = str(">", from_value_with_units(distance, label_units), "<");
     
     complete_template(
         outer_width=outer_width+taper,
@@ -482,29 +519,31 @@ module double_mt_template(
         registration_tabs_p=registration_tabs_p
     ) union() {
         // First M&T
-        translate([0, distance, base_height-eps]) union() {
-            difference() {
-                tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
-                translate([0, 0, -eps])
-                    mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
-            }
-            translate([0, (outer_thickness-taper+inner_thickness)/4, baseless_height])
-                label_part(top_label_text, label_bounds);
-            if (bottom_label_p) {
-                translate([0, -(outer_thickness-taper+inner_thickness)/4, baseless_height])
-                    label_part(bottom_label_text, label_bounds);
-            }
-        }
+        translate([0, distance, base_height-eps])
+            baseless_mt_template(
+                mortise_width=mortise_width,
+                mortise_thickness=mortise_thickness,
+                corner_radius=corner_radius,
+                inner_guide_bearing=inner_guide_bearing,
+                outer_guide_bearing=outer_guide_bearing,
+                inner_bit=inner_bit,
+                outer_bit=outer_bit,
+                top_label_text=mt_size_label_text,
+                bottom_label_text=settings_label_text
+            );
         // Second M&T
-        translate([0, -distance, base_height-eps]) union() {
-            difference() {
-                tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
-                translate([0, 0, -eps])
-                    mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
-            }
-            translate([0, (outer_thickness-taper+inner_thickness)/4, baseless_height])
-                label_part(distance_label_text, label_bounds);
-        }
+        translate([0, -distance, base_height-eps])
+            baseless_mt_template(
+                mortise_width=mortise_width,
+                mortise_thickness=mortise_thickness,
+                corner_radius=corner_radius,
+                inner_guide_bearing=inner_guide_bearing,
+                outer_guide_bearing=outer_guide_bearing,
+                inner_bit=inner_bit,
+                outer_bit=outer_bit,
+                top_label_text=distance_label_text,
+                bottom_label_text=""
+            );
         // Base Plate
         base_plate(width=outer_width+taper, thickness=outer_thickness+taper+2*distance, radius=outer_radius > eps ? outer_radius+taper/2 : 0);
     }
