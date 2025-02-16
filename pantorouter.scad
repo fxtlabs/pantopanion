@@ -315,14 +315,14 @@ module registration_tabs(base_width, base_thickness, vertical_p=false) {
     }
 }
 
-function top_label_string(value, units) =
+function from_value_with_units(value, units) =
     units == "d" ?
         as_decimal_inches(to_inches(value)) :
         (units == "f" ?
             as_fractional_inches(to_inches(value)) :
             as_millimeters(value));
 
-function bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) =
+function settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) =
     let (
         inner_bit_s = as_fractional_inches(to_inches(inner_bit)),
         outer_bit_s = as_fractional_inches(to_inches(outer_bit)),
@@ -332,54 +332,14 @@ function bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit
         tenon_s = str("T", outer_bit_s, "•", outer_guide_bearing)
     )
         str(mortise_s, " ", tenon_s);
-    
-module mt_label(label_text, width, height=0, top, bottom) {
-    if (len(label_text) > 0) {
-        text_size = height > 0 ? height : (top - bottom) * 0.7;
-        dy = (top + bottom) / 2;
-        tm = textmetrics(size=text_size, halign="center", valign="center", text=label_text);
-        too_big_p = tm.size.x / tm.size.y > width / text_size;
-        /* NOTE: use the following snippet if you do not want to use
-           the experimental textmetrics() function.
-        // The average ratio of height to width of characters is 6:5
-        too_big_p = len(label_text) > (width / text_size) * 5 / 5.75;
-        */
-        color("blue") translate([0, dy, template_height]) {
-            linear_extrude(height=label_height*2, center=true) {
-                if (too_big_p) {
-                    resize([width, 0, 0], auto=[true, true, false])
-                        text(size=text_size, halign="center", valign="center", text=label_text);
-                } else {
-                    text(size=text_size, halign="center", valign="center", font=":style=Bold", text=label_text);
-                }
-            }
-        }
-    }
-}
 
-module dowel_label(label_text, top, bottom) {
-    n_chars = len(label_text);
-    if (n_chars > 0) {
-        opt_text_size = (top - bottom) * 0.7;
-        radius = bottom + (top - bottom - opt_text_size) / 2;
-        tm = textmetrics(size=opt_text_size, halign="center", valign="baseline", text=label_text);
-        text_size = opt_text_size * min(tm.size.x, PI * abs(radius)) / tm.size.x;
-        widths = [for (c = label_text) textmetrics(size=text_size, halign="left", valign="baseline", text=c).advance.x];
-        total_width = sum(widths);
-        total_a = 180 * total_width / (PI * radius);
-        start_a = total_a / 2;
-        da = total_a / total_width;
-        start_as = [for (a = start_a, i = 0; i < len(widths); a = a - da * widths[i], i = i + 1) a];
-        for(i = [0 : n_chars - 1]) {
-            rotate([0, 0, start_as[i]])
-                translate([0, radius, template_height]) {
-                    linear_extrude(height=label_height*2, center=true) {
-                        text(size=text_size, halign="left", valign="baseline", font=":style=Bold", text=label_text[i]);
-                    }
-                }
-        }
-    }
-}   
+function mt_size_text(mortise_width, mortise_thickness, vertical_p, label_units) =
+    str(
+        from_value_with_units(mortise_width, label_units),
+        "\u00d7", // Unicode for vertically centered x
+        from_value_with_units(mortise_thickness, label_units),
+        (vertical_p ? "-V" : "")
+    );
 
 module base_plate(width, thickness, radius) {
     dx = width / 2 - radius;
@@ -486,6 +446,33 @@ module double_mt_template(
     }
 }
 
+function mt_label_bounds(outer_width, outer_thickness, outer_radius, inner_thickness) =
+    let (
+        max_size = ((outer_thickness - taper) - inner_thickness) / 2,
+        text_factor = 0.7,
+        text_top = (outer_thickness - taper) / 2,
+        text_bottom = inner_thickness / 2,
+        r = outer_radius > 0 ? 0.5 * outer_thickness * (1 - sin(acos(((text_factor + 0.5 * (1 - text_factor)) * text_top + 0.5 * (1 -text_factor) * text_bottom) / (outer_thickness / 2)))) : 0,
+        max_width = outer_width - 2 * max(r, text_margin) - taper
+    ) [max_width, max_size];
+
+module label_part(label_text, bounds) {
+    if (len(label_text) > 0) {
+        text_factor = 0.7;
+        text_size = text_factor * bounds[1];
+        tm = textmetrics(size=text_size, halign="center", valign="center", text=label_text);
+        too_big_p = tm.size.x / tm.size.y > bounds[0] / text_size;
+        linear_extrude(height=label_height*2, center=true) {
+            if (too_big_p) {
+                resize([bounds[0], 0, 0], auto=[true, true, false])
+                    text(size=text_size, halign="center", valign="center", text=label_text);
+            } else {
+                text(size=text_size, halign="center", valign="center", font=":style=Bold", text=label_text);
+            }
+        }
+    }
+}
+
 module mt_template(
     mortise_width,
     mortise_thickness,
@@ -510,20 +497,14 @@ module mt_template(
     inner_width = (mortise_width - inner_bit) * 2 + inner_guide_bearing;
     inner_radius = max(0, min(2 * corner_radius, mortise_thickness) - inner_bit) + inner_guide_bearing / 2 + inner_radius_adjust;
 
-    text_top = (outer_thickness - taper) / 2;
-    text_bottom = inner_thickness / 2;
-    text_factor = 0.7;
-    text_size = (text_top - text_bottom) * text_factor;
-    r = outer_radius > 0 ? 0.5 * outer_thickness * (1 - sin(acos(((text_factor + 0.5 * (1 - text_factor)) * text_top + 0.5 * (1 -text_factor) * text_bottom) / (outer_thickness / 2)))) : 0;
-    echo(r);
-    text_width = outer_width - 2 * max(r, text_margin) - taper;
-    top_label = str(
-        top_label_string(value=mortise_width, units=label_units),
-        "\u00d7", // Unicode for vertically centered x
-        top_label_string(value=mortise_thickness, units=label_units),
-        (vertical_p ? "-V" : ""));
-    bottom_label = bottom_label_p ? bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) : "";
-    
+    label_bounds = mt_label_bounds(
+        outer_width=outer_width,
+        outer_thickness=outer_thickness,
+        outer_radius=outer_radius,
+        inner_thickness=inner_thickness);
+    top_label_text = mt_size_text(mortise_width, mortise_thickness, vertical_p, label_units);
+    bottom_label_text = settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
+
     complete_template(
         outer_width=outer_width + taper,
         outer_thickness=outer_thickness + taper,
@@ -538,10 +519,13 @@ module mt_template(
                 translate([0, 0, base_height])
                     mortise_part(height=template_height-base_height, width=inner_width, thickness=inner_thickness, radius=inner_radius);
                 center_marks(width=outer_width, thickness=outer_thickness, vertical_p=vertical_p);
-
-                mt_label(label_text=bottom_label, width=text_width, height=text_size, top=-text_bottom, bottom=-text_top);
             }
-            mt_label(label_text=top_label, width=text_width, height=text_size, top=text_top, bottom=text_bottom);
+            translate([0, (outer_thickness-taper+inner_thickness)/4, template_height])
+                label_part(top_label_text, label_bounds);
+            if (bottom_label_p) {
+                translate([0, -(outer_thickness-taper+inner_thickness)/4, template_height])
+                    label_part(bottom_label_text, label_bounds);
+            }
          }
     }
 }
@@ -566,6 +550,35 @@ module std_mt_template(
         registration_tabs_p=registration_tabs_p);
 }
 
+
+
+function dowel_size_text(diameter, units) =
+    str( "ø", from_value_with_units(diameter, units)); // Unicode \u2300 for diameter symbol does not work
+   
+module dowel_label(label_text, top, bottom) {
+    n_chars = len(label_text);
+    if (n_chars > 0) {
+        opt_text_size = (top - bottom) * 0.7;
+        radius = bottom + (top - bottom - opt_text_size) / 2;
+        tm = textmetrics(size=opt_text_size, halign="center", valign="baseline", text=label_text);
+        text_size = opt_text_size * min(tm.size.x, PI * abs(radius)) / tm.size.x;
+        widths = [for (c = label_text) textmetrics(size=text_size, halign="left", valign="baseline", text=c).advance.x];
+        total_width = sum(widths);
+        total_a = 180 * total_width / (PI * radius);
+        start_a = total_a / 2;
+        da = total_a / total_width;
+        start_as = [for (a = start_a, i = 0; i < len(widths); a = a - da * widths[i], i = i + 1) a];
+        for(i = [0 : n_chars - 1]) {
+            rotate([0, 0, start_as[i]])
+                translate([0, radius, template_height]) {
+                    linear_extrude(height=label_height*2, center=true) {
+                        text(size=text_size, halign="left", valign="baseline", font=":style=Bold", text=label_text[i]);
+                    }
+                }
+        }
+    }
+}   
+
 module dowel_template(
     dowel_diameter,
     inner_guide_bearing,
@@ -584,8 +597,8 @@ module dowel_template(
     
     text_top = (outer_diameter - taper) / 2;
     text_bottom = inner_diameter / 2;
-    top_label = str( "ø", top_label_string(value=dowel_diameter, units=label_units)); // Unicode \u2300 for diameter symbol does not work
-    bottom_label = bottom_label_p ? bottom_label_string(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) : ""; 
+    top_label = dowel_size_text(dowel_diameter, label_units);
+    bottom_label = bottom_label_p ? settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) : ""; 
     
     complete_template(
         outer_width=outer_diameter+taper,
@@ -642,7 +655,8 @@ module calibration_template1() {
     difference() {
         union() {
             translate([0, 0, template_height / 2]) cube([50, 30, template_height], center = true);
-            mt_label(label_text="50mm x 30mm", width=46, top=15, bottom=5);
+            translate([0, 10, template_height])
+                label_part("50mm x 30mm", [46, 10]);
         }
         translate([0, 0, template_height / 2 + base_height]) hull() {
             translate([-15, 0, 0]) cube([10, 10, template_height], center=true);
@@ -654,7 +668,8 @@ module calibration_template1() {
         translate([5, 0, 0]) cylinder(h=template_height*2, d=center_hole_diameter, center=true);
         // Screw hole w/o correction for difference operation (and w/o countersink)
         translate([15, 0, 0]) cylinder(h=template_height*2, d=screw_hole_diameter, center=true);
-        mt_label(label_text="50mm x 30mm", width=46, top=-5, bottom=-15);
+        translate([0, -10, template_height])
+            label_part("50mm x 30mm", [46, 10]);
     }
 }
 
@@ -680,7 +695,8 @@ module calibration_template() {
     difference() {
         union() {
             translate([0, 0, template_height / 2]) cube([50, 30, template_height], center = true);
-            mt_label(label_text="50mm x 30mm", width=46, top=15, bottom=5);
+            translate([0, 10, template_height])
+                label_part("50mm x 30mm", [46, 10]);
         }
         translate([0, 0, template_height / 2 + base_height]) hull() {
             translate([-15, 0, 0]) cube([10, 10, template_height], center=true);
@@ -692,7 +708,8 @@ module calibration_template() {
         translate([5, 0, 0]) cylinder(h=template_height*2, d=center_hole_diameter, center=true);
         // Screw hole w/o correction for difference operation (and w/o countersink)
         translate([15, 0, 0]) cylinder(h=template_height*2, d=screw_hole_diameter, center=true);
-        mt_label(label_text="50mm x 30mm", width=46, top=-5, bottom=-15);
+        translate([0, -10, template_height])
+            label_part("50mm x 30mm", [46, 10]);
     }
 }
 
