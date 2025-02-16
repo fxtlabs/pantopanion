@@ -28,11 +28,244 @@
 
 use <math.scad>
 include <constants.scad>
+use <BOSL/math.scad>
 use <BOSL/shapes.scad>
 include <BOSL/constants.scad>
 
+/* [Hidden] */
+
 $fa = 1;
 $fs = 0.4;
+
+
+//////////////////////////
+// Template Components
+//////////////////////////
+
+
+module center_hole() {
+    radius = circumscribed(center_hole_diameter / 2) + hole_radius_adjust;
+    cylinder(h=template_height*2, r=radius, center=true);
+}
+
+
+module screw_hole() {
+    countersink_radius = screw_countersink_diameter / 2 + hole_radius_adjust;
+    countersink_height =
+        countersink_radius / tan(screw_countersink_angle / 2);
+    screw_hole_radius = circumscribed(screw_hole_diameter / 2) + hole_radius_adjust;
+    union() {
+        cylinder(h=template_height*2, r=screw_hole_radius, center=true);
+        translate([0, 0, base_height - countersink_height + eps])
+            cylinder(countersink_height, r1=0, r2=countersink_radius, center=false);
+    }
+}
+
+
+module center_hole_clearance() {
+    side = center_hole_diameter + 2 * registration_tab_spacer;
+    cube([side, side, 2*template_height], center=true);
+}
+
+
+module screw_hole_clearance() {
+    side = screw_hole_diameter + 2 * registration_tab_spacer;
+    cube([side, side, 2*template_height], center=true);
+}
+
+
+function v_screw_position(width) =
+    // For vertical templates, either the screws can go into the upper and
+    // lower tracks of the template holder or we put a single screw in the
+    // middle track
+    (width >= 2 * track_spacing + screw_countersink_diameter) ? track_spacing : 0;
+
+
+function h_screw_position(width) =
+    // For horizontal templates, the screws are spaced out along
+    // the middle track of the template holder, getting closer and
+    // closer to the ends
+    (width >= 2 * track_spacing + screw_countersink_diameter) ?
+        (((width - screw_countersink_diameter) / 2 + track_spacing) / 2) :
+        ((width > min_screw_spacing + screw_countersink_diameter) ?
+            ((width - screw_countersink_diameter) / 2) : 0);
+
+
+function screw_layout(width, thickness, vertical_p) =
+    vertical_p ? v_screw_position(width=width) : h_screw_position(width=width);
+
+
+function holes_layout(width, thickness, vertical_p) =
+    let (
+        screw_position = screw_layout(width=width, thickness=thickness, vertical_p=vertical_p)
+    )
+        (2 * screw_position > min_screw_spacing + center_hole_diameter) ? [screw_position, 0] : [screw_position, undef];
+
+
+// Operator module. The first child should create the center hole;
+// the second child the screw hole.        
+module position_holes(width, thickness, vertical_p) {
+    assert(thickness >= screw_countersink_diameter);
+    assert(width >= screw_countersink_diameter);
+    positions = holes_layout(width=width, thickness=thickness, vertical_p=vertical_p);
+    screw_position = positions[0];
+    center_hole_position = positions[1];
+    if (screw_position <= eps) {
+        // There is only enough space for one screw in the center
+        children(1);
+    } else {
+        union() {
+            translate([-screw_position, 0, 0]) children(1);
+            translate([screw_position, 0, 0]) children(1);
+            if (center_hole_position == 0) {
+                children(0);
+            }
+        }
+    }
+}
+
+
+module center_mark() {
+    size = 2 * center_mark_height;
+    rotate([0, 0, 45]) cube(size, center=true);
+}
+
+
+module center_marks(width, thickness, vertical_p) {
+    if (vertical_p) {
+        center_mark_x = (width + taper) / 2 + center_mark_height * sqrt(2) - center_mark_depth;
+        translate([-center_mark_x, 0, 0]) center_mark();
+        translate([center_mark_x, 0, 0]) center_mark();
+    } else {
+        center_mark_y = (thickness + taper) / 2 + center_mark_height * sqrt(2) - center_mark_depth;
+        translate([0, -center_mark_y, 0]) center_mark();
+        translate([0, center_mark_y, 0]) center_mark();
+    }
+}
+
+
+module registration_tab(base_width) {
+    width = base_width - 2 * registration_tab_spacer;
+    thickness = registration_tab_thickness;
+    wall = registration_tab_protrusion + registration_tab_intrusion;
+
+    rotate([0, 0, 90]) translate([0, 0, -registration_tab_protrusion])
+        narrowing_strut(w=thickness, l=width, wall=wall, ang=45);
+}
+
+
+module registration_tabs(base_width, base_thickness, vertical_p=false) {
+    if (vertical_p) {
+        rotate([0, 0, 90]) union() {
+            translate([0, track_spacing, 0])
+                registration_tab(base_thickness);
+            translate([0, -track_spacing, 0])
+                registration_tab(base_thickness);
+        }
+    } else {
+        registration_tab(base_width);
+    }
+}
+
+
+function from_value_with_units(value, units) =
+    units == "d" ?
+        as_decimal_inches(to_inches(value)) :
+        (units == "f" ?
+            as_fractional_inches(to_inches(value)) :
+            as_millimeters(value));
+
+function settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) =
+    let (
+        inner_bit_s = as_fractional_inches(to_inches(inner_bit)),
+        outer_bit_s = as_fractional_inches(to_inches(outer_bit)),
+        inner_guide_bearing_s = as_millimeters(inner_guide_bearing),
+        outer_guide_bearing_s = as_millimeters(outer_guide_bearing),
+        mortise_s = str("M", inner_bit_s, "•", inner_guide_bearing),
+        tenon_s = str("T", outer_bit_s, "•", outer_guide_bearing)
+    )
+        str(mortise_s, " ", tenon_s);
+
+
+module base_plate(width, thickness, radius) {
+    dx = width / 2 - radius;
+    dy = thickness / 2 - radius;
+    height = base_height;
+
+    if (radius > eps) {
+        // rounded ends
+        hull() {
+            translate([dx, dy, 0])
+                cylinder(h=height, r=radius, center=false);
+            translate([-dx, dy, 0])
+                cylinder(h=height, r=radius, center=false);
+            translate([dx, -dy, 0])
+                cylinder(h=height, r=radius, center=false);
+            translate([-dx, -dy, 0])
+                cylinder(h=height, r=radius, center=false);
+        }
+    } else {
+        // square ends
+        translate([0, 0, base_height/2])
+            cube([width, thickness, base_height], center=true);
+    }        
+}
+
+
+// Operator module.
+module complete_template(outer_width, outer_thickness, inner_width, inner_thickness, vertical_p, registration_tabs_p) {
+    difference() {
+        children(0);
+        position_holes(width=inner_width+taper, thickness=inner_thickness, vertical_p=vertical_p) {
+            center_hole();
+            screw_hole();
+        }
+
+        // registration_tabs
+        difference() {
+            registration_tabs(outer_width, outer_thickness, vertical_p=vertical_p);
+            position_holes(width=inner_width, thickness=inner_thickness, vertical_p=vertical_p) {
+                center_hole_clearance();
+                screw_hole_clearance();
+            }
+        }
+    }
+
+    if (registration_tabs_p) {
+        // Include the registration tabs for printing 
+        translate([0, (outer_thickness + (vertical_p ? outer_thickness - 2 * registration_tab_spacer : registration_tab_thickness)) / 2 + registration_tab_spacer, registration_tab_protrusion])
+            difference() {
+                registration_tabs(outer_width, outer_thickness, vertical_p);
+                position_holes(width=inner_width, thickness=inner_thickness, vertical_p=vertical_p) {
+                    center_hole_clearance();
+                    screw_hole_clearance();
+                }
+            }
+    }    
+}
+
+
+module label_part(label_text, bounds) {
+    if (len(label_text) > 0) {
+        text_factor = 0.7;
+        text_size = text_factor * bounds[1];
+        tm = textmetrics(size=text_size, halign="center", valign="center", text=label_text);
+        too_big_p = tm.size.x / tm.size.y > bounds[0] / text_size;
+        linear_extrude(height=label_height*2, center=true) {
+            if (too_big_p) {
+                resize([bounds[0], 0, 0], auto=[true, true, false])
+                    text(size=text_size, halign="center", valign="center", text=label_text);
+            } else {
+                text(size=text_size, halign="center", valign="center", font=":style=Bold", text=label_text);
+            }
+        }
+    }
+}
+
+
+//////////////////////////
+// M&T Templates
+//////////////////////////
 
 
 module tenon_part(height, width, thickness, radius) {
@@ -75,6 +308,7 @@ module tenon_part(height, width, thickness, radius) {
     }
 }
 
+
 module mortise_part(height,width, thickness, radius) {
     step_height = height / n_mortise_steps;
     offset = max(width / 2 - radius, 0);
@@ -103,135 +337,6 @@ module mortise_part(height,width, thickness, radius) {
     }
 }
 
-module center_hole() {
-    radius = circumscribed(center_hole_diameter / 2) + hole_radius_adjust;
-    cylinder(h=template_height*2, r=radius, center=true);
-}
-
-module screw_hole() {
-    countersink_radius = screw_countersink_diameter / 2 + hole_radius_adjust;
-    countersink_height =
-        countersink_radius / tan(screw_countersink_angle / 2);
-    screw_hole_radius = circumscribed(screw_hole_diameter / 2) + hole_radius_adjust;
-    union() {
-        cylinder(h=template_height*2, r=screw_hole_radius, center=true);
-        translate([0, 0, base_height - countersink_height + eps])
-            cylinder(countersink_height, r1=0, r2=countersink_radius, center=false);
-    }
-}
-
-module center_hole_clearance() {
-    side = center_hole_diameter + 2 * registration_tab_spacer;
-    cube([side, side, 2*template_height], center=true);
-}
-
-module screw_hole_clearance() {
-    side = screw_hole_diameter + 2 * registration_tab_spacer;
-    cube([side, side, 2*template_height], center=true);
-}
-
-function v_screw_position(width) =
-    // For vertical templates, either the screws can go into the upper and
-    // lower tracks of the template holder or we put a single screw in the
-    // middle track
-    (width >= 2 * track_spacing + screw_countersink_diameter) ? track_spacing : 0;
-
-function h_screw_position(width) =
-    // For horizontal templates, the screws are spaced out along
-    // the middle track of the template holder, getting closer and
-    // closer to the ends
-    (width >= 2 * track_spacing + screw_countersink_diameter) ?
-        (((width - screw_countersink_diameter) / 2 + track_spacing) / 2) :
-        ((width > min_screw_spacing + screw_countersink_diameter) ?
-            ((width - screw_countersink_diameter) / 2) : 0);
-
-function screw_layout(width, thickness, vertical_p) =
-    vertical_p ? v_screw_position(width=width) : h_screw_position(width=width);
-
-function holes_layout(width, thickness, vertical_p) =
-    let (
-        screw_position = screw_layout(width=width, thickness=thickness, vertical_p=vertical_p)
-    )
-        (2 * screw_position > min_screw_spacing + center_hole_diameter) ? [screw_position, 0] : [screw_position, undef];
-
-// Operator module. The first child should create the center hole;
-// the second child the screw hole.        
-module position_holes(width, thickness, vertical_p) {
-    assert(thickness >= screw_countersink_diameter);
-    assert(width >= screw_countersink_diameter);
-    positions = holes_layout(width=width, thickness=thickness, vertical_p=vertical_p);
-    screw_position = positions[0];
-    center_hole_position = positions[1];
-    if (screw_position <= eps) {
-        // There is only enough space for one screw in the center
-        children(1);
-    } else {
-        union() {
-            translate([-screw_position, 0, 0]) children(1);
-            translate([screw_position, 0, 0]) children(1);
-            if (center_hole_position == 0) {
-                children(0);
-            }
-        }
-    }
-}
-
-module center_mark() {
-    size = 2 * center_mark_height;
-    rotate([0, 0, 45]) cube(size, center=true);
-}
-
-module center_marks(width, thickness, vertical_p) {
-    if (vertical_p) {
-        center_mark_x = (width + taper) / 2 + center_mark_height * sqrt(2) - center_mark_depth;
-        translate([-center_mark_x, 0, 0]) center_mark();
-        translate([center_mark_x, 0, 0]) center_mark();
-    } else {
-        center_mark_y = (thickness + taper) / 2 + center_mark_height * sqrt(2) - center_mark_depth;
-        translate([0, -center_mark_y, 0]) center_mark();
-        translate([0, center_mark_y, 0]) center_mark();
-    }
-}
-
-module registration_tab(base_width) {
-    width = base_width - 2 * registration_tab_spacer;
-    thickness = registration_tab_thickness;
-    wall = registration_tab_protrusion + registration_tab_intrusion;
-
-    rotate([0, 0, 90]) translate([0, 0, -registration_tab_protrusion])
-        narrowing_strut(w=thickness, l=width, wall=wall, ang=45);
-}
-
-module registration_tabs(base_width, base_thickness, vertical_p=false) {
-    if (vertical_p) {
-        rotate([0, 0, 90]) union() {
-            translate([0, track_spacing, 0])
-                registration_tab(base_thickness);
-            translate([0, -track_spacing, 0])
-                registration_tab(base_thickness);
-        }
-    } else {
-        registration_tab(base_width);
-    }
-}
-
-function from_value_with_units(value, units) =
-    units == "d" ?
-        as_decimal_inches(to_inches(value)) :
-        (units == "f" ?
-            as_fractional_inches(to_inches(value)) :
-            as_millimeters(value));
-
-function settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) =
-    let (
-        inner_bit_s = as_fractional_inches(to_inches(inner_bit)),
-        outer_bit_s = as_fractional_inches(to_inches(outer_bit)),
-        inner_guide_bearing_s = as_millimeters(inner_guide_bearing),
-        outer_guide_bearing_s = as_millimeters(outer_guide_bearing),
-        mortise_s = str("M", inner_bit_s, "•", inner_guide_bearing),
-        tenon_s = str("T", outer_bit_s, "•", outer_guide_bearing)
-    )
-        str(mortise_s, " ", tenon_s);
 
 function mt_size_text(mortise_width, mortise_thickness, vertical_p, label_units) =
     str(
@@ -241,110 +346,6 @@ function mt_size_text(mortise_width, mortise_thickness, vertical_p, label_units)
         (vertical_p ? "-V" : "")
     );
 
-module base_plate(width, thickness, radius) {
-    dx = width / 2 - radius;
-    dy = thickness / 2 - radius;
-    height = base_height;
-
-    if (radius > eps) {
-        // rounded ends
-        hull() {
-            translate([dx, dy, 0])
-                cylinder(h=height, r=radius, center=false);
-            translate([-dx, dy, 0])
-                cylinder(h=height, r=radius, center=false);
-            translate([dx, -dy, 0])
-                cylinder(h=height, r=radius, center=false);
-            translate([-dx, -dy, 0])
-                cylinder(h=height, r=radius, center=false);
-        }
-    } else {
-        // square ends
-        translate([0, 0, base_height/2])
-            cube([width, thickness, base_height], center=true);
-    }        
-}
-
-// Operator module.
-module complete_template(outer_width, outer_thickness, inner_width, inner_thickness, vertical_p, registration_tabs_p) {
-    difference() {
-        children(0);
-        position_holes(width=inner_width+taper, thickness=inner_thickness, vertical_p=vertical_p) {
-            center_hole();
-            screw_hole();
-        }
-
-        // registration_tabs
-        difference() {
-            registration_tabs(outer_width, outer_thickness, vertical_p=vertical_p);
-            position_holes(width=inner_width, thickness=inner_thickness, vertical_p=vertical_p) {
-                center_hole_clearance();
-                screw_hole_clearance();
-            }
-        }
-    }
-
-    if (registration_tabs_p) {
-        // Include the registration tabs for printing 
-        translate([0, (outer_thickness + (vertical_p ? outer_thickness - 2 * registration_tab_spacer : registration_tab_thickness)) / 2 + registration_tab_spacer, registration_tab_protrusion])
-            difference() {
-                registration_tabs(outer_width, outer_thickness, vertical_p);
-                position_holes(width=inner_width, thickness=inner_thickness, vertical_p=vertical_p) {
-                    center_hole_clearance();
-                    screw_hole_clearance();
-                }
-            }
-    }    
-}
-
-module double_mt_template(
-    distance,
-    mortise_width,
-    mortise_thickness,
-    corner_radius,
-    inner_guide_bearing,
-    outer_guide_bearing,
-    inner_bit,
-    outer_bit,
-    vertical_p=false,
-    label_units,
-    bottom_label_p,
-    registration_tabs_p=true) {
-    assert(inner_bit <= mortise_thickness, "The router bit used for the mortise cannot be bigger than the mortise thickness!");
-    assert(inner_bit <= mortise_width, "The router bit used for the mortise cannot be bigger than the mortise width!");
-    assert(mortise_thickness <= mortise_width, "The mortise width cannot be smaller than the mortise thickness!");
-
-    outer_thickness = (mortise_thickness + outer_bit) * 2 - outer_guide_bearing;
-    outer_width = (mortise_width + outer_bit) * 2 - outer_guide_bearing;
-    outer_radius = corner_radius > 0 ? (min(2 * corner_radius, mortise_thickness) + outer_bit - outer_guide_bearing / 2) : 0;
-
-    inner_thickness = mortise_thickness > inner_bit ? ((mortise_thickness - inner_bit) * 2 + inner_guide_bearing) : inner_guide_bearing;
-    inner_width = (mortise_width - inner_bit) * 2 + inner_guide_bearing;
-    inner_radius = max(0, min(2 * corner_radius, mortise_thickness) - inner_bit) + inner_guide_bearing / 2 + inner_radius_adjust;
-
-    complete_template(
-        outer_width=outer_width+taper,
-        outer_thickness=outer_thickness+taper+2*distance,
-        inner_width=outer_width+taper,
-        inner_thickness=2*distance-(outer_thickness+taper),
-        vertical_p=vertical_p,
-        registration_tabs_p=registration_tabs_p) union() {
-        // First M&T
-        translate([0, distance, base_height-eps]) difference() {
-            tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
-            translate([0, 0, -eps])
-                mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
-        }
-        // Second M&T
-        translate([0, -distance, base_height-eps]) difference() {
-            tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
-            translate([0, 0, -eps])
-                mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
-        }
-        // Base Plate
-        base_plate(width=outer_width+taper, thickness=outer_thickness+taper+2*distance, radius=outer_radius+taper/2);
-    }
-}
 
 function mt_label_bounds(outer_width, outer_thickness, outer_radius, inner_thickness) =
     let (
@@ -356,22 +357,6 @@ function mt_label_bounds(outer_width, outer_thickness, outer_radius, inner_thick
         max_width = outer_width - 2 * max(r, text_margin) - taper
     ) [max_width, max_size];
 
-module label_part(label_text, bounds) {
-    if (len(label_text) > 0) {
-        text_factor = 0.7;
-        text_size = text_factor * bounds[1];
-        tm = textmetrics(size=text_size, halign="center", valign="center", text=label_text);
-        too_big_p = tm.size.x / tm.size.y > bounds[0] / text_size;
-        linear_extrude(height=label_height*2, center=true) {
-            if (too_big_p) {
-                resize([bounds[0], 0, 0], auto=[true, true, false])
-                    text(size=text_size, halign="center", valign="center", text=label_text);
-            } else {
-                text(size=text_size, halign="center", valign="center", font=":style=Bold", text=label_text);
-            }
-        }
-    }
-}
 
 module mt_template(
     mortise_width,
@@ -430,6 +415,7 @@ module mt_template(
     }
 }
 
+
 module std_mt_template(
     mortise_width,
     vertical_p=false,
@@ -450,6 +436,92 @@ module std_mt_template(
         registration_tabs_p=registration_tabs_p);
 }
 
+
+module double_mt_template(
+    distance,
+    mortise_width,
+    mortise_thickness,
+    corner_radius,
+    inner_guide_bearing,
+    outer_guide_bearing,
+    inner_bit,
+    outer_bit,
+    vertical_p=false,
+    label_units,
+    bottom_label_p,
+    registration_tabs_p=true) {
+    assert(inner_bit <= mortise_thickness, "The router bit used for the mortise cannot be bigger than the mortise thickness!");
+    assert(inner_bit <= mortise_width, "The router bit used for the mortise cannot be bigger than the mortise width!");
+    assert(mortise_thickness <= mortise_width, "The mortise width cannot be smaller than the mortise thickness!");
+
+    outer_thickness = (mortise_thickness + outer_bit) * 2 - outer_guide_bearing;
+    outer_width = (mortise_width + outer_bit) * 2 - outer_guide_bearing;
+    outer_radius = corner_radius > 0 ? (min(2 * corner_radius, mortise_thickness) + outer_bit - outer_guide_bearing / 2) : 0;
+
+    inner_thickness = mortise_thickness > inner_bit ? ((mortise_thickness - inner_bit) * 2 + inner_guide_bearing) : inner_guide_bearing;
+    inner_width = (mortise_width - inner_bit) * 2 + inner_guide_bearing;
+    inner_radius = max(0, min(2 * corner_radius, mortise_thickness) - inner_bit) + inner_guide_bearing / 2 + inner_radius_adjust;
+
+    complete_template(
+        outer_width=outer_width+taper,
+        outer_thickness=outer_thickness+taper+2*distance,
+        inner_width=outer_width+taper,
+        inner_thickness=2*distance-(outer_thickness+taper),
+        vertical_p=vertical_p,
+        registration_tabs_p=registration_tabs_p) union() {
+        // First M&T
+        translate([0, distance, base_height-eps]) difference() {
+            tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
+            translate([0, 0, -eps])
+                mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
+        }
+        // Second M&T
+        translate([0, -distance, base_height-eps]) difference() {
+            tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
+            translate([0, 0, -eps])
+                mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
+        }
+        // Base Plate
+        base_plate(width=outer_width+taper, thickness=outer_thickness+taper+2*distance, radius=outer_radius > eps ? outer_radius+taper/2 : 0);
+    }
+}
+
+
+module std_mt_spacer_template(distance) {
+    // Notice that "distance" refers to the center-to-center distance
+    // between the two mortises; on the PantoRouter templates, that is
+    // multiplied by two.
+    flange_radius = screw_countersink_diameter;
+    spacer_height = template_height / 2;
+    intersection() {
+        difference() {
+            union() {
+                hull () {
+                    translate([track_spacing, 0, -eps])
+                        cylinder(h=base_height+eps, r=flange_radius, center=false);
+                    translate([-track_spacing, 0, -eps])
+                        cylinder(h=base_height+eps, r=flange_radius, center=false);
+                }
+                translate([0, 0, spacer_height/2+eps])
+                    cube([2*track_spacing-12, (2*distance)-12, spacer_height+2*eps], center=true);
+            }
+            center_hole();
+            translate([track_spacing, 0, 0]) screw_hole();
+            translate([-track_spacing, 0, 0]) screw_hole();
+            translate([0, -distance, 0])
+                std_mt_template(mortise_width=2*track_spacing, vertical_p=true, label_units="f", registration_tabs_p=false);
+            translate([0, distance, 0])
+                std_mt_template(mortise_width=2*track_spacing, vertical_p=true, label_units="f", registration_tabs_p=false);
+        }
+        translate([0, 0, spacer_height/2+eps])
+            cube([(flange_radius+track_spacing)*2+eps, distance*2, spacer_height], center=true);
+    }
+}
+
+
+//////////////////////////
+// Dowel Templates
+//////////////////////////
 
 
 function dowel_size_text(diameter, units) =
@@ -551,34 +623,3 @@ module std_dowel_template(registration_tabs_p=true) {
     }
 }
 
-
-module std_mt_spacer_template(distance) {
-    // Notice that "distance" refers to the center-to-center distance
-    // between the two mortises; on the PantoRouter templates, that is
-    // multiplied by two.
-    flange_radius = screw_countersink_diameter;
-    spacer_height = template_height / 2;
-    intersection() {
-        difference() {
-            union() {
-                hull () {
-                    translate([track_spacing, 0, -eps])
-                        cylinder(h=base_height+eps, r=flange_radius, center=false);
-                    translate([-track_spacing, 0, -eps])
-                        cylinder(h=base_height+eps, r=flange_radius, center=false);
-                }
-                translate([0, 0, spacer_height/2+eps])
-                    cube([2*track_spacing-12, (2*distance)-12, spacer_height+2*eps], center=true);
-            }
-            center_hole();
-            translate([track_spacing, 0, 0]) screw_hole();
-            translate([-track_spacing, 0, 0]) screw_hole();
-            translate([0, -distance, 0])
-                std_mt_template(mortise_width=2*track_spacing, vertical_p=true, label_units="f", registration_tabs_p=false);
-            translate([0, distance, 0])
-                std_mt_template(mortise_width=2*track_spacing, vertical_p=true, label_units="f", registration_tabs_p=false);
-        }
-        translate([0, 0, spacer_height/2+eps])
-            cube([(flange_radius+track_spacing)*2+eps, distance*2, spacer_height], center=true);
-    }
-}
