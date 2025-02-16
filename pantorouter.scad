@@ -69,6 +69,11 @@ $fa = 1;
 $fs = 0.4;
 hole_fn = 64;
 
+std_inner_bit = to_millimeters(0.5);
+std_outer_bit = to_millimeters(0.5);
+std_inner_guide_bearing = 10;
+std_outer_guide_bearing = 22;
+
 template_height = 12;
 base_height = 3.6;
 baseless_height = 10;
@@ -547,15 +552,14 @@ module std_mt_template(
     label_units,
     registration_tabs_p=true) {
     
-    half_inch = to_millimeters(0.5);
     mt_template(
         mortise_width=mortise_width,
-        mortise_thickness=half_inch,
-        corner_radius=half_inch/2,
-        inner_guide_bearing=10,
-        outer_guide_bearing=22,
-        inner_bit=half_inch,
-        outer_bit=half_inch,
+        mortise_thickness=std_inner_bit,
+        corner_radius=std_inner_bit/2,
+        inner_guide_bearing=std_inner_guide_bearing,
+        outer_guide_bearing=std_outer_guide_bearing,
+        inner_bit=std_inner_bit,
+        outer_bit=std_outer_bit,
         vertical_p=vertical_p,
         label_units=label_units,
         bottom_label_p=false,
@@ -614,7 +618,7 @@ module std_dowel_template(registration_tabs_p=true) {
     bottom_outer_diameter = 31; // measured
     height = 12; // measured
     // inner diameter fits 10mm guide bearing
-    inner_diameter = circumscribed(10) + 2 * hole_radius_adjust;
+    inner_diameter = 2 * (circumscribed(std_inner_guide_bearing / 2) + hole_radius_adjust);
     
     complete_template(
         outer_width=bottom_outer_diameter,
