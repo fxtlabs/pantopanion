@@ -133,11 +133,11 @@ module center_mark() {
 
 module center_marks(width, thickness, vertical_p) {
     if (vertical_p) {
-        center_mark_x = (width + taper) / 2 + center_mark_height * sqrt(2) - center_mark_depth;
+        center_mark_x = width / 2 + center_mark_height * sqrt(2) - center_mark_depth;
         translate([-center_mark_x, 0, 0]) center_mark();
         translate([center_mark_x, 0, 0]) center_mark();
     } else {
-        center_mark_y = (thickness + taper) / 2 + center_mark_height * sqrt(2) - center_mark_depth;
+        center_mark_y = thickness / 2 + center_mark_height * sqrt(2) - center_mark_depth;
         translate([0, -center_mark_y, 0]) center_mark();
         translate([0, center_mark_y, 0]) center_mark();
     }
@@ -403,7 +403,7 @@ module mt_template(
                 tenon_part(height=template_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
                 translate([0, 0, base_height])
                     mortise_part(height=template_height-base_height, width=inner_width, thickness=inner_thickness, radius=inner_radius);
-                center_marks(width=outer_width, thickness=outer_thickness, vertical_p=vertical_p);
+                center_marks(width=outer_width+taper, thickness=outer_thickness+taper, vertical_p=vertical_p);
             }
             translate([0, (outer_thickness-taper+inner_thickness)/4, template_height])
                 label_part(top_label_text, label_bounds);
@@ -610,7 +610,7 @@ module dowel_template(
                 translate([0, 0, base_height])
                     cylinder(h=template_height, d=inner_diameter, center=false);
 
-                center_marks(width=outer_diameter, thickness=outer_diameter, vertical_p=false);
+                center_marks(width=outer_diameter+taper, thickness=outer_diameter+taper, vertical_p=false);
         
                 color("blue")
                     dowel_label(label_text=bottom_label, top=-text_bottom, bottom=-text_top);
@@ -642,7 +642,7 @@ module std_dowel_template(registration_tabs_p=true) {
             translate([0, 0, base_height])
                 cylinder(h=height, d=inner_diameter, center=false);
 
-            center_marks(width=bottom_outer_diameter - taper, thickness=bottom_outer_diameter - taper, vertical_p=false);
+            center_marks(width=bottom_outer_diameter, thickness=bottom_outer_diameter, vertical_p=false);
         }
     }
 }
