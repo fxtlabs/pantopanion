@@ -462,24 +462,48 @@ module double_mt_template(
     inner_width = (mortise_width - inner_bit) * 2 + inner_guide_bearing;
     inner_radius = max(0, min(2 * corner_radius, mortise_thickness) - inner_bit) + inner_guide_bearing / 2 + inner_radius_adjust;
 
+    label_bounds = mt_label_bounds(
+        outer_width=outer_width,
+        outer_thickness=outer_thickness,
+        outer_radius=outer_radius,
+        inner_thickness=inner_thickness);
+    top_label_text = mt_size_text(mortise_width, mortise_thickness, vertical_p, label_units);
+    bottom_label_text = settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
+    
+    distance_label_text = 
+        str(">", from_value_with_units(distance, label_units), "<");
+    
     complete_template(
         outer_width=outer_width+taper,
         outer_thickness=outer_thickness+taper+2*distance,
         inner_width=outer_width+taper,
         inner_thickness=2*distance-(outer_thickness+taper),
         vertical_p=vertical_p,
-        registration_tabs_p=registration_tabs_p) union() {
+        registration_tabs_p=registration_tabs_p
+    ) union() {
         // First M&T
-        translate([0, distance, base_height-eps]) difference() {
-            tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
-            translate([0, 0, -eps])
-                mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
+        translate([0, distance, base_height-eps]) union() {
+            difference() {
+                tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
+                translate([0, 0, -eps])
+                    mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
+            }
+            translate([0, (outer_thickness-taper+inner_thickness)/4, baseless_height])
+                label_part(top_label_text, label_bounds);
+            if (bottom_label_p) {
+                translate([0, -(outer_thickness-taper+inner_thickness)/4, baseless_height])
+                    label_part(bottom_label_text, label_bounds);
+            }
         }
         // Second M&T
-        translate([0, -distance, base_height-eps]) difference() {
-            tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
-            translate([0, 0, -eps])
-                mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
+        translate([0, -distance, base_height-eps]) union() {
+            difference() {
+                tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
+                translate([0, 0, -eps])
+                    mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
+            }
+            translate([0, (outer_thickness-taper+inner_thickness)/4, baseless_height])
+                label_part(distance_label_text, label_bounds);
         }
         // Base Plate
         base_plate(width=outer_width+taper, thickness=outer_thickness+taper+2*distance, radius=outer_radius > eps ? outer_radius+taper/2 : 0);
