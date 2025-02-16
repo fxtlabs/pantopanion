@@ -1,6 +1,17 @@
 // Math functions
 
+use <BOSL/math.scad>
+
 INCH_TO_MM = 25.4;
+
+// Given the radius of a circle (or cylinder), return a new radius that would
+// yield a polygonal approximation that circumscribes the original circle.
+// Use it for subtracted shapes so that the resulting hole is as big as
+// requested.
+// References:
+// https://en.wikibooks.org/wiki/OpenSCAD_User_Manual/undersized_circular_objects
+function circumscribed(radius) =
+    let (n = segs(radius)) radius / cos(180 / n);
 
 // greatest common divisor
 function gcd(a, b) =

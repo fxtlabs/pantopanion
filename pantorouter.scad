@@ -27,104 +27,13 @@
 //   rename the project to PantoRouter Templates as well).
 
 use <math.scad>
-use <BOSL/math.scad>
+include <constants.scad>
 use <BOSL/shapes.scad>
 include <BOSL/constants.scad>
 
-
-// Customizable parameters
-
-Template = "M&T"; // ["Dowel", "M&T", "Std Dowel", "Std M&T", "Double M&T", "Std M&T Spacer", "Centering Pin", "Calibration"]
-
-Inner_Bit = 0.375; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
-Outer_Bit = 0.5; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
-Inner_Guide_Bearing = 10;   // [6:6 mm, 10:10 mm, 12:12 mm, 15:15 mm, 22:22 mm, 35:35 mm, 48:48 mm]
-Outer_Guide_Bearing = 15;   // [6:6 mm, 10:10 mm, 12:12 mm, 15:15 mm, 22:22 mm, 35:35 mm, 48:48 mm]
-Label_Units = "f";  // [d:Decimal Inches, f:Fractional Inches, m:Millimeters]
-Bottom_Label = true;
-Registration_Tabs = true;
-
-/* [ Mortise And Tenon Template ] */
-
-Orientation = "H"; // [H:Horizontal, V:Vertical]
-// in inches
-Mortise_Width = 2.5; // [0.25:0.0625:4]
-// in inches
-Mortise_Thickness = 0.5; // [0.125:0.0625:2]
-// in inches
-Corner_Radius = 0;   // [0:0.0625:1]
-
-/* [ Dowel Template ] */
-
-// in inches
-Dowel_Diameter = 1; // [0.25:0.125:4]
-
-/* [ Mortise And Tenon Spacer Template ] */
-
-Mortises_Spacing = 1; // [0.75:0.0625:4]
-
-/* [Hidden] */
-
 $fa = 1;
 $fs = 0.4;
-hole_fn = 64;
 
-std_inner_bit = to_millimeters(0.5);
-std_outer_bit = to_millimeters(0.5);
-std_inner_guide_bearing = 10;
-std_outer_guide_bearing = 22;
-
-template_height = 12;
-base_height = 3.6;
-baseless_height = 10;
-// The outside of the template tapers in by 2 mm all around; that amounts
-// to a slope of 10° on the standard M&T templates, but a slope of 12° on
-// the triple tenon template which has a flanged base before starting to
-// taper.
-taper = 2;
-n_mortise_steps = 3;
-mortise_step_width = 1;
-center_hole_diameter = 6;
-screw_hole_diameter = 4;
-screw_countersink_diameter = 9;
-screw_countersink_angle = 90;
-min_screw_spacing = screw_countersink_diameter;
-track_spacing = 20;
-registration_tab_thickness = 4.2;
-registration_tab_intrusion = 0.6;
-registration_tab_protrusion = 1.2;
-registration_tab_spacer = 2.2;
-center_mark_height = 3;
-center_mark_depth = 0.6;
-text_margin = 4;
-label_height = 0.4;
-
-hole_radius_adjust = 0.12;
-inner_radius_adjust = 0.08;
-eps = 0.01;
-
-module centering_pin() {
-    adj = 0.2;
-    handle_h = 10;
-    handle_d = 12;
-    shaft_h = 15;
-    shaft_d = center_hole_diameter + adj;
-    pin_h = base_height;
-    pin_d = screw_hole_diameter + adj;
-    tip_h = 3;
-    tip_d = 2;
-    // handle
-    cylinder(h=handle_h, d=handle_d, center=false, $fn=8);
-    // shaft
-    translate([0, 0, handle_h-eps])
-        cylinder(h=shaft_h+eps, d=shaft_d, center=false);
-    translate([0, 0, handle_h+shaft_h-eps]) hull() {
-        // pin
-        cylinder(h=2*eps, d=pin_d, center=true);
-        translate([0, 0, pin_h])
-            cylinder(h=tip_h, d1=pin_d, d2=tip_d, center=false);
-    }
-}
 
 module tenon_part(height, width, thickness, radius) {
     dx = width / 2 - radius;
@@ -193,15 +102,6 @@ module mortise_part(height,width, thickness, radius) {
             cube([width+2*(n_mortise_steps*mortise_step_width), thickness, height+2*eps], center=true);
     }
 }
-
-// Given the radius of a circle (or cylinder), return a new radius that would
-// yield a polygonal approximation that circumscribes the original circle.
-// Use it for subtracted shapes so that the resulting hole is as big as
-// requested.
-// References:
-// https://en.wikibooks.org/wiki/OpenSCAD_User_Manual/undersized_circular_objects
-function circumscribed(radius) =
-    let (n = segs(radius)) radius / cos(180 / n);
 
 module center_hole() {
     radius = circumscribed(center_hole_diameter / 2) + hole_radius_adjust;
@@ -651,67 +551,6 @@ module std_dowel_template(registration_tabs_p=true) {
     }
 }
 
-module calibration_template1() {
-    difference() {
-        union() {
-            translate([0, 0, template_height / 2]) cube([50, 30, template_height], center = true);
-            translate([0, 10, template_height])
-                label_part("50mm x 30mm", [46, 10]);
-        }
-        translate([0, 0, template_height / 2 + base_height]) hull() {
-            translate([-15, 0, 0]) cube([10, 10, template_height], center=true);
-            translate([15, 0, 0]) cylinder(h=template_height, d=10, center = true);
-        }
-        translate([-5, 0, 0]) center_hole();
-        translate([-15, 0, 0]) screw_hole();
-        // Center hole w/o correction for difference operation
-        translate([5, 0, 0]) cylinder(h=template_height*2, d=center_hole_diameter, center=true);
-        // Screw hole w/o correction for difference operation (and w/o countersink)
-        translate([15, 0, 0]) cylinder(h=template_height*2, d=screw_hole_diameter, center=true);
-        translate([0, -10, template_height])
-            label_part("50mm x 30mm", [46, 10]);
-    }
-}
-
-/*
-// create a cube with recesses for all sizes of the PantoRouter's guide
-// bearings.
-module calibration_template2() {
-    difference() {
-        translate([0, 0, 5]) cube([130, 58, 10], center=true);
-        translate([-60, -24, 3]) {
-            translate([48+5, 5, 0]) cylinder(h=10, r=circumscribed(10/2), center=false);
-            translate([48+5, 48-6, 0]) cylinder(h=10, r=circumscribed(12/2), center=false);
-            translate([48+5+5+35+5+11, 48-7.5, 0]) cylinder(h=10, r=circumscribed(15/2), center=false);
-            translate([48+5+5+35+5+11, 11, 0]) cylinder(h=10, r=circumscribed(22/2), center=false);
-            translate([48+5+5+17.5, 24, 0]) cylinder(h=10, r=circumscribed(35/2), center=false);
-            translate([24, 24, 0]) cylinder(h=10, r=circumscribed(48/2), center=false);
-        }
-    }
-}
-*/
-
-module calibration_template() {
-    difference() {
-        union() {
-            translate([0, 0, template_height / 2]) cube([50, 30, template_height], center = true);
-            translate([0, 10, template_height])
-                label_part("50mm x 30mm", [46, 10]);
-        }
-        translate([0, 0, template_height / 2 + base_height]) hull() {
-            translate([-15, 0, 0]) cube([10, 10, template_height], center=true);
-            translate([15, 0, 0]) cylinder(h=template_height, d=10, center = true);
-        }
-        translate([-5, 0, 0]) center_hole();
-        translate([-15, 0, 0]) screw_hole();
-        // Center hole w/o correction for difference operation
-        translate([5, 0, 0]) cylinder(h=template_height*2, d=center_hole_diameter, center=true);
-        // Screw hole w/o correction for difference operation (and w/o countersink)
-        translate([15, 0, 0]) cylinder(h=template_height*2, d=screw_hole_diameter, center=true);
-        translate([0, -10, template_height])
-            label_part("50mm x 30mm", [46, 10]);
-    }
-}
 
 module std_mt_spacer_template(distance) {
     // Notice that "distance" refers to the center-to-center distance
@@ -742,54 +581,4 @@ module std_mt_spacer_template(distance) {
         translate([0, 0, spacer_height/2+eps])
             cube([(flange_radius+track_spacing)*2+eps, distance*2, spacer_height], center=true);
     }
-}
-
-if (Template == "Dowel") {
-    dowel_template(
-        dowel_diameter=to_millimeters(Dowel_Diameter),
-        inner_guide_bearing=Inner_Guide_Bearing,
-        outer_guide_bearing=Outer_Guide_Bearing,
-        inner_bit=to_millimeters(Inner_Bit),
-        outer_bit=to_millimeters(Outer_Bit),
-        label_units=Label_Units,
-        bottom_label_p=Bottom_Label);
-} else if(Template == "M&T") {
-    mt_template(
-        mortise_width=to_millimeters(Mortise_Width),
-        mortise_thickness=to_millimeters(Mortise_Thickness),
-        corner_radius=to_millimeters(Corner_Radius),
-        inner_guide_bearing=Inner_Guide_Bearing,
-        outer_guide_bearing=Outer_Guide_Bearing,
-        inner_bit=to_millimeters(Inner_Bit),
-        outer_bit=to_millimeters(Outer_Bit),
-        vertical_p=(Orientation == "V" ? true : false),
-        label_units=Label_Units,
-        bottom_label_p=Bottom_Label);
-} else if(Template == "Double M&T") {
-    double_mt_template(
-        distance=to_millimeters(Mortises_Spacing),
-        mortise_width=to_millimeters(Mortise_Width),
-        mortise_thickness=to_millimeters(Mortise_Thickness),
-        corner_radius=to_millimeters(Corner_Radius),
-        inner_guide_bearing=Inner_Guide_Bearing,
-        outer_guide_bearing=Outer_Guide_Bearing,
-        inner_bit=to_millimeters(Inner_Bit),
-        outer_bit=to_millimeters(Outer_Bit),
-        vertical_p=(Orientation == "V" ? true : false),
-        label_units=Label_Units,
-        bottom_label_p=Bottom_Label);        
-} else if (Template == "Std Dowel") {
-    std_dowel_template();
-} else if (Template == "Std M&T") {
-    std_mt_template(
-        mortise_width=to_millimeters(Mortise_Width),
-        vertical_p=(Orientation == "V" ? true : false),
-        label_units=Label_Units,
-    );
-} else if (Template == "Std M&T Spacer") {
-    std_mt_spacer_template(distance=to_millimeters(Mortises_Spacing));
-} else if (Template == "Centering Pin") {
-    centering_pin();
-} else {
-    calibration_template();
 }
