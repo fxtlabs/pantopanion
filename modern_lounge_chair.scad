@@ -2,7 +2,8 @@
 // - Guide bearings holder with labels (ø in mm and std router bit)
 
 use <math.scad>
-include <templates.scad>
+include <constants.scad>
+use <templates.scad>
 
 // Customizable parameters
 
@@ -40,6 +41,37 @@ module modern_lounge_chair_template_a(registration_tabs_p=true) {
 }
 
 
+module complete_template_b(angle, width, thickness, registration_tabs_p) {
+    difference() {
+        children(0);
+        center_hole();
+        translate([-track_spacing, -tan(angle)*track_spacing, 0])
+            screw_hole();
+        translate([track_spacing, tan(angle)*track_spacing, 0])
+            screw_hole();
+        difference() {
+            registration_tabs(width, thickness, vertical_p=true);
+            translate([-track_spacing, -tan(angle)*track_spacing, 0])
+                screw_hole_clearance();
+            translate([track_spacing, tan(angle)*track_spacing, 0])
+                screw_hole_clearance();
+        }
+    }
+
+    if (registration_tabs_p) {
+        // Include the registration tabs for printing 
+        translate([0, (thickness + (thickness - 2 * registration_tab_spacer)) / 2 + registration_tab_spacer, registration_tab_protrusion])
+            difference() {
+                registration_tabs(width, thickness, vertical_p=true);
+                translate([-track_spacing, -tan(angle)*track_spacing, 0])
+                    screw_hole_clearance();
+                translate([track_spacing, tan(angle)*track_spacing, 0])
+                    screw_hole_clearance();
+            }
+    }   
+}
+
+
 module modern_lounge_chair_template_b(
     left_p=true,
     distance=to_millimeters(1/4 + 3/4),
@@ -73,12 +105,9 @@ module modern_lounge_chair_template_b(
     distance_label_text = str(">", from_value_with_units(distance, label_units), "< ", left_p ? "left" : "right");
     custom_label_text = extra_label_text == undef ? "" : extra_label_text;
     
-    complete_template(
-        outer_width=outer_width1+taper,
-        outer_thickness=outer_thickness+taper+2*distance,
-        inner_width=outer_width1+taper,
-        inner_thickness=2*distance-(outer_thickness+taper),
-        vertical_p=vertical_p,
+    complete_template_b(angle,
+        width=base_width,
+        thickness=base_thickness,
         registration_tabs_p=registration_tabs_p
     ) union() {
         rotate([0, 0, angle]) {
