@@ -26,6 +26,7 @@ include <BOSL/constants.scad>
 $fa = 1;
 $fs = 0.4;
 
+text_size_factor = 0.7;
 
 //////////////////////////
 // Template Components
@@ -240,8 +241,7 @@ module complete_template(outer_width, outer_thickness, inner_width, inner_thickn
 
 module label_part(label_text, bounds) {
     if (len(label_text) > 0) {
-        text_factor = 0.7;
-        text_size = text_factor * bounds.y;
+        text_size = text_size_factor * bounds.y;
         tm = textmetrics(size=text_size, halign="center", valign="center", text=label_text);
         too_big_p = tm.size.x > bounds.x;
         linear_extrude(height=label_height*2, center=true) {
@@ -343,10 +343,9 @@ function mt_size_text(mortise_width, mortise_thickness, vertical_p, label_units)
 function mt_label_bounds(outer_width, outer_thickness, outer_radius, inner_thickness) =
     let (
         max_size = ((outer_thickness - taper) - inner_thickness) / 2,
-        text_factor = 0.7,
         text_top = (outer_thickness - taper) / 2,
         text_bottom = inner_thickness / 2,
-        r = outer_radius > 0 ? 0.5 * outer_thickness * (1 - sin(acos(((text_factor + 0.5 * (1 - text_factor)) * text_top + 0.5 * (1 -text_factor) * text_bottom) / (outer_thickness / 2)))) : 0,
+        r = outer_radius > 0 ? 0.5 * outer_thickness * (1 - sin(acos(((text_size_factor + 0.5 * (1 - text_size_factor)) * text_top + 0.5 * (1 -text_size_factor) * text_bottom) / (outer_thickness / 2)))) : 0,
         max_width = outer_width - 2 * max(r, text_margin) - taper
     ) [max_width, max_size];
 
@@ -618,7 +617,7 @@ function dowel_size_text(diameter, units) =
 module dowel_label(label_text, top, bottom) {
     n_chars = len(label_text);
     if (n_chars > 0) {
-        opt_text_size = (top - bottom) * 0.7;
+        opt_text_size = (top - bottom) * text_size_factor;
         radius = bottom + (top - bottom - opt_text_size) / 2;
         tm = textmetrics(size=opt_text_size, halign="center", valign="baseline", text=label_text);
         text_size = opt_text_size * min(tm.size.x, PI * abs(radius)) / tm.size.x;
