@@ -488,7 +488,7 @@ module baseless_mt_template(
     union() {
         difference() {
             tenon_part(height=baseless_height, width=outer_width, thickness=outer_thickness, radius=outer_radius);
-            translate([0, 0, base_height])
+            translate([0, 0, -eps])
                 mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
         }
         if (len(top_label_t) > 0) {
