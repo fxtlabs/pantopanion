@@ -530,11 +530,6 @@ module double_mt_template(
     inner_thickness = dimensions[4];
     inner_radius = dimensions[5];
 
-    label_bounds = mt_label_bounds(
-        outer_width=outer_width,
-        outer_thickness=outer_thickness,
-        outer_radius=outer_radius,
-        inner_thickness=inner_thickness);
     mt_size_label_text = mt_size_text(mortise_width, mortise_thickness, vertical_p, label_units);
     settings_label_text = settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
     distance_label_text = str(">", from_value_with_units(distance, label_units), "<");
