@@ -351,6 +351,24 @@ function mt_label_bounds(outer_width, outer_thickness, outer_radius, inner_thick
     ) [max_width, max_size];
 
 
+function mt_template_dimensions(
+    mortise_width,
+    mortise_thickness,
+    corner_radius,
+    inner_guide_bearing,
+    outer_guide_bearing,
+    inner_bit,
+    outer_bit) =
+    let (
+        outer_thickness = (mortise_thickness + outer_bit) * 2 - outer_guide_bearing,
+        outer_width = (mortise_width + outer_bit) * 2 - outer_guide_bearing,
+        outer_radius = corner_radius > 0 ? (min(2 * corner_radius, mortise_thickness) + outer_bit - outer_guide_bearing / 2) : 0,
+        inner_thickness = mortise_thickness > inner_bit ? ((mortise_thickness - inner_bit) * 2 + inner_guide_bearing) : inner_guide_bearing,
+        inner_width = (mortise_width - inner_bit) * 2 + inner_guide_bearing,
+        inner_radius = max(0, min(2 * corner_radius, mortise_thickness) - inner_bit) + inner_guide_bearing / 2 + inner_radius_adjust
+    ) [outer_width, outer_thickness, outer_radius, inner_width, inner_thickness, inner_radius];
+
+
 module mt_template(
     mortise_width,
     mortise_thickness,
@@ -367,13 +385,14 @@ module mt_template(
     assert(inner_bit <= mortise_width, "The router bit used for the mortise cannot be bigger than the mortise width!");
     assert(mortise_thickness <= mortise_width, "The mortise width cannot be smaller than the mortise thickness!");
 
-    outer_thickness = (mortise_thickness + outer_bit) * 2 - outer_guide_bearing;
-    outer_width = (mortise_width + outer_bit) * 2 - outer_guide_bearing;
-    outer_radius = corner_radius > 0 ? (min(2 * corner_radius, mortise_thickness) + outer_bit - outer_guide_bearing / 2) : 0;
-
-    inner_thickness = mortise_thickness > inner_bit ? ((mortise_thickness - inner_bit) * 2 + inner_guide_bearing) : inner_guide_bearing;
-    inner_width = (mortise_width - inner_bit) * 2 + inner_guide_bearing;
-    inner_radius = max(0, min(2 * corner_radius, mortise_thickness) - inner_bit) + inner_guide_bearing / 2 + inner_radius_adjust;
+    // I wish OpenSCAD supported objects :-(
+    dimensions = mt_template_dimensions(mortise_width, mortise_thickness, corner_radius, inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
+    outer_width = dimensions[0];
+    outer_thickness = dimensions[1];
+    outer_radius = dimensions[2];
+    inner_width = dimensions[3];
+    inner_thickness = dimensions[4];
+    inner_radius = dimensions[5];
 
     label_bounds = mt_label_bounds(
         outer_width=outer_width,
@@ -444,13 +463,14 @@ module baseless_mt_template(
     assert(inner_bit <= mortise_width, "The router bit used for the mortise cannot be bigger than the mortise width!");
     assert(mortise_thickness <= mortise_width, "The mortise width cannot be smaller than the mortise thickness!");
 
-    outer_thickness = (mortise_thickness + outer_bit) * 2 - outer_guide_bearing;
-    outer_width = (mortise_width + outer_bit) * 2 - outer_guide_bearing;
-    outer_radius = corner_radius > 0 ? (min(2 * corner_radius, mortise_thickness) + outer_bit - outer_guide_bearing / 2) : 0;
-
-    inner_thickness = mortise_thickness > inner_bit ? ((mortise_thickness - inner_bit) * 2 + inner_guide_bearing) : inner_guide_bearing;
-    inner_width = (mortise_width - inner_bit) * 2 + inner_guide_bearing;
-    inner_radius = max(0, min(2 * corner_radius, mortise_thickness) - inner_bit) + inner_guide_bearing / 2 + inner_radius_adjust;
+    // I wish OpenSCAD supported objects :-(
+    dimensions = mt_template_dimensions(mortise_width, mortise_thickness, corner_radius, inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
+    outer_width = dimensions[0];
+    outer_thickness = dimensions[1];
+    outer_radius = dimensions[2];
+    inner_width = dimensions[3];
+    inner_thickness = dimensions[4];
+    inner_radius = dimensions[5];
 
     label_bounds = mt_label_bounds(
         outer_width=outer_width,
@@ -493,13 +513,14 @@ module double_mt_template(
     assert(inner_bit <= mortise_width, "The router bit used for the mortise cannot be bigger than the mortise width!");
     assert(mortise_thickness <= mortise_width, "The mortise width cannot be smaller than the mortise thickness!");
 
-    outer_thickness = (mortise_thickness + outer_bit) * 2 - outer_guide_bearing;
-    outer_width = (mortise_width + outer_bit) * 2 - outer_guide_bearing;
-    outer_radius = corner_radius > 0 ? (min(2 * corner_radius, mortise_thickness) + outer_bit - outer_guide_bearing / 2) : 0;
-
-    inner_thickness = mortise_thickness > inner_bit ? ((mortise_thickness - inner_bit) * 2 + inner_guide_bearing) : inner_guide_bearing;
-    inner_width = (mortise_width - inner_bit) * 2 + inner_guide_bearing;
-    inner_radius = max(0, min(2 * corner_radius, mortise_thickness) - inner_bit) + inner_guide_bearing / 2 + inner_radius_adjust;
+    // I wish OpenSCAD supported objects :-(
+    dimensions = mt_template_dimensions(mortise_width, mortise_thickness, corner_radius, inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
+    outer_width = dimensions[0];
+    outer_thickness = dimensions[1];
+    outer_radius = dimensions[2];
+    inner_width = dimensions[3];
+    inner_thickness = dimensions[4];
+    inner_radius = dimensions[5];
 
     label_bounds = mt_label_bounds(
         outer_width=outer_width,
