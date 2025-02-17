@@ -241,12 +241,12 @@ module complete_template(outer_width, outer_thickness, inner_width, inner_thickn
 module label_part(label_text, bounds) {
     if (len(label_text) > 0) {
         text_factor = 0.7;
-        text_size = text_factor * bounds[1];
+        text_size = text_factor * bounds.y;
         tm = textmetrics(size=text_size, halign="center", valign="center", text=label_text);
-        too_big_p = tm.size.x / tm.size.y > bounds[0] / text_size;
+        too_big_p = tm.size.x > bounds.x;
         linear_extrude(height=label_height*2, center=true) {
             if (too_big_p) {
-                resize([bounds[0], 0, 0], auto=[true, true, false])
+                resize([bounds.x, 0, 0], auto=[true, true, false])
                     text(size=text_size, halign="center", valign="center", text=label_text);
             } else {
                 text(size=text_size, halign="center", valign="center", font=":style=Bold", text=label_text);
