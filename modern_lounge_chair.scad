@@ -24,6 +24,7 @@ outer_guide_bearing=10;
 inner_bit = to_millimeters(0.25);
 outer_bit = to_millimeters(0.5);
 label_units = "f";
+extra_label_text = "modern lounge chair";
 
 
 module modern_lounge_chair_template_a(registration_tabs_p=true) {
@@ -82,7 +83,6 @@ module modern_lounge_chair_template_b(
     vertical_p=true;
     mortise_width1 = to_millimeters(1 + 3/16);
     mortise_width2 = to_millimeters(15/16);
-    extra_label_text = "modern lounge chair";
 
     // I wish OpenSCAD supported objects :-(
     dimensions1 = mt_template_dimensions(mortise_width1, mortise_thickness, corner_radius, inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
@@ -103,7 +103,6 @@ module modern_lounge_chair_template_b(
     mt_size_label_text = mt_size_text(mortise_width1, mortise_thickness, vertical_p, label_units);
     settings_label_text = settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
     distance_label_text = str(">", from_value_with_units(distance, label_units), "< ", left_p ? "left" : "right");
-    custom_label_text = extra_label_text == undef ? "" : extra_label_text;
     
     complete_template_b(angle,
         width=base_width,
@@ -135,7 +134,7 @@ module modern_lounge_chair_template_b(
                 inner_bit=inner_bit,
                 outer_bit=outer_bit,
                 top_label_text=distance_label_text,
-                bottom_label_text=custom_label_text
+                bottom_label_text=extra_label_text
             );
         }
         // Base Plate
@@ -164,7 +163,7 @@ module modern_lounge_chair_template_d(
         outer_bit=outer_bit,
         vertical_p=true,
         label_units=label_units,
-        extra_label_text="modern lounge chair",
+        extra_label_text=extra_label_text,
         registration_tabs_p=registration_tabs_p);
 }
 
