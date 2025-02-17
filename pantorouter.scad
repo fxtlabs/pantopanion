@@ -379,7 +379,8 @@ module mt_template(
     outer_bit,
     vertical_p=false,
     label_units,
-    bottom_label_p,
+    top_label_text=undef,
+    bottom_label_text=undef,
     registration_tabs_p=true) {
     assert(inner_bit <= mortise_thickness, "The router bit used for the mortise cannot be bigger than the mortise thickness!");
     assert(inner_bit <= mortise_width, "The router bit used for the mortise cannot be bigger than the mortise width!");
@@ -399,8 +400,8 @@ module mt_template(
         outer_thickness=outer_thickness,
         outer_radius=outer_radius,
         inner_thickness=inner_thickness);
-    top_label_text = mt_size_text(mortise_width, mortise_thickness, vertical_p, label_units);
-    bottom_label_text = settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
+    top_label_t = top_label_text == undef ? mt_size_text(mortise_width, mortise_thickness, vertical_p, label_units) : top_label_text;
+    bottom_label_t = bottom_label_text == undef ? settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) : bottom_label_text;
 
     complete_template(
         outer_width=outer_width + taper,
@@ -417,11 +418,13 @@ module mt_template(
                     mortise_part(height=template_height-base_height, width=inner_width, thickness=inner_thickness, radius=inner_radius);
                 center_marks(width=outer_width+taper, thickness=outer_thickness+taper, vertical_p=vertical_p);
             }
-            translate([0, (outer_thickness-taper+inner_thickness)/4, template_height])
-                label_part(top_label_text, label_bounds);
-            if (bottom_label_p) {
+            if (len(top_label_t) > 0) {
+                translate([0, (outer_thickness-taper+inner_thickness)/4, template_height])
+                    label_part(top_label_t, label_bounds);
+            }
+            if (len(bottom_label_t) > 0) {
                 translate([0, -(outer_thickness-taper+inner_thickness)/4, template_height])
-                    label_part(bottom_label_text, label_bounds);
+                    label_part(bottom_label_t, label_bounds);
             }
         }
     }
@@ -432,6 +435,8 @@ module std_mt_template(
     mortise_width,
     vertical_p=false,
     label_units,
+    top_label_text=undef,
+    bottom_label_text="",
     registration_tabs_p=true) {
     
     mt_template(
@@ -444,7 +449,8 @@ module std_mt_template(
         outer_bit=std_outer_bit,
         vertical_p=vertical_p,
         label_units=label_units,
-        bottom_label_p=false,
+        top_label_text=top_label_text,
+        bottom_label_text=bottom_label_text,
         registration_tabs_p=registration_tabs_p);
 }
 
@@ -457,8 +463,8 @@ module baseless_mt_template(
     outer_guide_bearing,
     inner_bit,
     outer_bit,
-    top_label_text,
-    bottom_label_text) {
+    top_label_text=undef,
+    bottom_label_text=undef) {
     assert(inner_bit <= mortise_thickness, "The router bit used for the mortise cannot be bigger than the mortise thickness!");
     assert(inner_bit <= mortise_width, "The router bit used for the mortise cannot be bigger than the mortise width!");
     assert(mortise_thickness <= mortise_width, "The mortise width cannot be smaller than the mortise thickness!");
@@ -477,6 +483,8 @@ module baseless_mt_template(
         outer_thickness=outer_thickness,
         outer_radius=outer_radius,
         inner_thickness=inner_thickness);
+    top_label_t = top_label_text == undef ? mt_size_text(mortise_width, mortise_thickness, vertical_p, label_units) : top_label_text;
+    bottom_label_t = bottom_label_text == undef ? settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) : bottom_label_text;
 
     union() {
         difference() {
@@ -484,13 +492,13 @@ module baseless_mt_template(
             translate([0, 0, base_height])
                 mortise_part(height=baseless_height+2*eps, width=inner_width, thickness=inner_thickness, radius=inner_radius);
         }
-        if (len(top_label_text) > 0) {
+        if (len(top_label_t) > 0) {
             translate([0, (outer_thickness-taper+inner_thickness)/4, baseless_height])
-                label_part(top_label_text, label_bounds);
+                label_part(top_label_t, label_bounds);
         }
-        if (len(bottom_label_text) > 0) {
+        if (len(bottom_label_t) > 0) {
             translate([0, -(outer_thickness-taper+inner_thickness)/4, baseless_height])
-                label_part(bottom_label_text, label_bounds);
+                label_part(bottom_label_t, label_bounds);
         }
     }
 }
@@ -507,7 +515,7 @@ module double_mt_template(
     outer_bit,
     vertical_p=false,
     label_units,
-    bottom_label_p,
+    extra_label_text=undef,
     registration_tabs_p=true) {
     assert(inner_bit <= mortise_thickness, "The router bit used for the mortise cannot be bigger than the mortise thickness!");
     assert(inner_bit <= mortise_width, "The router bit used for the mortise cannot be bigger than the mortise width!");
@@ -530,6 +538,7 @@ module double_mt_template(
     mt_size_label_text = mt_size_text(mortise_width, mortise_thickness, vertical_p, label_units);
     settings_label_text = settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
     distance_label_text = str(">", from_value_with_units(distance, label_units), "<");
+    custom_label_text = extra_label_text == undef ? "" : extra_label_text;
     
     complete_template(
         outer_width=outer_width+taper,
@@ -563,7 +572,7 @@ module double_mt_template(
                 inner_bit=inner_bit,
                 outer_bit=outer_bit,
                 top_label_text=distance_label_text,
-                bottom_label_text=""
+                bottom_label_text=custom_label_text
             );
         // Base Plate
         base_plate(width=outer_width+taper, thickness=outer_thickness+taper+2*distance, radius=outer_radius > eps ? outer_radius+taper/2 : 0);
