@@ -651,7 +651,8 @@ module dowel_template(
     inner_bit,
     outer_bit,
     label_units,
-    bottom_label_p,
+    top_label_text=undef,
+    bottom_label_text=undef,
     registration_tabs_p=true) {
     assert(inner_bit <= dowel_diameter, "The router bit used for the round mortise cannot be bigger than the mortise diameter!");
 
@@ -662,8 +663,8 @@ module dowel_template(
     
     text_top = (outer_diameter - taper) / 2;
     text_bottom = inner_diameter / 2;
-    top_label = dowel_size_text(dowel_diameter, label_units);
-    bottom_label = bottom_label_p ? settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) : ""; 
+    top_label_t = top_label_text == undef ? dowel_size_text(dowel_diameter, label_units) : top_label_text;
+    bottom_label_t = bottom_label_text == undef ? settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) : bottom_label_text; 
     
     complete_template(
         outer_width=outer_diameter+taper,
@@ -680,13 +681,13 @@ module dowel_template(
                     cylinder(h=template_height, d=inner_diameter, center=false);
 
                 center_marks(width=outer_diameter+taper, thickness=outer_diameter+taper, vertical_p=false);
-        
-                color("blue")
-                    dowel_label(label_text=bottom_label, top=-text_bottom, bottom=-text_top);
             }
-            color("blue")
-                dowel_label(label_text=top_label, top=text_top, bottom=text_bottom);
-
+            if (len(top_label_t) > 0) {
+                dowel_label(label_text=top_label_t, top=text_top, bottom=text_bottom);
+            }
+            if (len(bottom_label_t) > 0) {
+                dowel_label(label_text=bottom_label_t, top=-text_bottom, bottom=-text_top);
+            }
         }
     }
 }

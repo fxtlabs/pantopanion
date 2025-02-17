@@ -12,7 +12,6 @@ Outer_Bit = 0.5; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\
 Inner_Guide_Bearing = 10;   // [6:6 mm, 10:10 mm, 12:12 mm, 15:15 mm, 22:22 mm, 35:35 mm, 48:48 mm]
 Outer_Guide_Bearing = 15;   // [6:6 mm, 10:10 mm, 12:12 mm, 15:15 mm, 22:22 mm, 35:35 mm, 48:48 mm]
 Label_Units = "f";  // [d:Decimal Inches, f:Fractional Inches, m:Millimeters]
-Bottom_Label = true;
 Registration_Tabs = true;
 
 /* [ Mortise And Tenon Template ] */
@@ -46,8 +45,7 @@ if (Template == "Dowel") {
         outer_guide_bearing=Outer_Guide_Bearing,
         inner_bit=to_millimeters(Inner_Bit),
         outer_bit=to_millimeters(Outer_Bit),
-        label_units=Label_Units,
-        bottom_label_p=Bottom_Label);
+        label_units=Label_Units);
 } else if(Template == "M&T") {
     mt_template(
         mortise_width=to_millimeters(Mortise_Width),
@@ -58,8 +56,7 @@ if (Template == "Dowel") {
         inner_bit=to_millimeters(Inner_Bit),
         outer_bit=to_millimeters(Outer_Bit),
         vertical_p=(Orientation == "V" ? true : false),
-        label_units=Label_Units,
-        bottom_label_p=Bottom_Label);
+        label_units=Label_Units);
 } else if(Template == "Double M&T") {
     double_mt_template(
         distance=to_millimeters(Mortises_Spacing),
@@ -71,8 +68,7 @@ if (Template == "Dowel") {
         inner_bit=to_millimeters(Inner_Bit),
         outer_bit=to_millimeters(Outer_Bit),
         vertical_p=(Orientation == "V" ? true : false),
-        label_units=Label_Units,
-        bottom_label_p=Bottom_Label);        
+        label_units=Label_Units);
 } else if (Template == "Std Dowel") {
     std_dowel_template();
 } else if (Template == "Std M&T") {
