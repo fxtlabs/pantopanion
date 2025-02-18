@@ -2,7 +2,11 @@
 
 use <BOSL/math.scad>
 
+
+/* [Hidden] */
+
 INCH_TO_MM = 25.4;
+
 
 // Given the radius of a circle (or cylinder), return a new radius that would
 // yield a polygonal approximation that circumscribes the original circle.
@@ -13,9 +17,11 @@ INCH_TO_MM = 25.4;
 function circumscribed(radius) =
     let (n = segs(radius)) radius / cos(180 / n);
 
+
 // greatest common divisor
 function gcd(a, b) =
     b == 0 ? a : gcd(b, a % b);
+
 
 // Given a value as a Number, it returns a mixed number consisting of a
 // whole number and a proper fraction as [whole, [numerator, denominator]],
@@ -33,23 +39,28 @@ function to_mixed_number(value, max_denominator=64) =
     )
         [whole, (factor > 0 ? [numerator / factor, denominator / factor] : [0, 1] )];
 
+
 // It converts a value from millimeters to inches.
 function to_inches(value) =
     value / INCH_TO_MM;
 
+
 // It converts a value from inches to millimeters.
 function to_millimeters(value) =
     value * INCH_TO_MM;
+
 
 // Given a value in millimeters, it returns it as a printable string.
 // (E.g. 1.75 => "1.75mm")
 function as_millimeters(value) =
     str(value, "mm");
 
+
 // Given a value in inches, it returns a string formatted as decimal inches.
 // (E.g. 1.75 => "1.75\"")
 function as_decimal_inches(value) =
     str(value, "\"");
+
 
 // Given a value in inches, it returns a string formatted as fractional inches.
 // (E.g. 1.75 => "1-3/4\"")
@@ -66,10 +77,12 @@ function as_fractional_inches(value) =
             (nominator > 0 ? str(nominator, "/", denominator) : ""),
             "\"");
 
+
 // Given a fraction in the form [numerator, denominator], it returns its
 // value as a native Number (or undef if the denominator == 0.
 function from_fraction(value) =
     value[1] != undef ? value[0] / value[1] : undef;
+
 
 // Given a mixed number in the form [whole_number, [numerator, denominator]],
 // it returns its value as a native Number.

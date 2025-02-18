@@ -3,11 +3,14 @@ use <math.scad>
 include <constants.scad>
 use <templates.scad>
 
+
+/* [Hidden] */
+
 $fa = 1;
 $fs = 0.4;
 
 
-// create a cube with recesses for all sizes of the PantoRouter's guide
+// Create a cube with recesses for all sizes of the PantoRouter's guide
 // bearings.
 module guide_bearing_recesses() {
     difference() {
@@ -23,6 +26,13 @@ module guide_bearing_recesses() {
     }
 }
 
+
+// Create a calibration cube of known size with a mortise recess,
+// a screw hole with countersink, and a center hole. All these should
+// have a tight fit with the 10 mm guide bearing and 6 mm shaft.
+// There are also two other holes corresponding to unadjusted sizes for
+// a screw hole and a center hole. PantoRouter template screws and 6 mm
+// shaft should not fit through these.
 module calibration_piece() {
     difference() {
         union() {
@@ -37,13 +47,16 @@ module calibration_piece() {
         translate([-5, 0, 0]) center_hole();
         translate([-15, 0, 0]) screw_hole();
         // Center hole w/o correction for difference operation
-        translate([5, 0, 0]) cylinder(h=template_height*2, d=center_hole_diameter, center=true);
+        translate([5, 0, 0])
+            cylinder(h=template_height*2, d=center_hole_diameter, center=true);
         // Screw hole w/o correction for difference operation (and w/o countersink)
-        translate([15, 0, 0]) cylinder(h=template_height*2, d=screw_hole_diameter, center=true);
+        translate([15, 0, 0])
+            cylinder(h=template_height*2, d=screw_hole_diameter, center=true);
         translate([0, -10, template_height])
             label_part("50mm x 30mm", [46, 10]);
     }
 }
+
 
 *guide_bearing_recesses();
 calibration_piece();

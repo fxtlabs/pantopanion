@@ -4,6 +4,9 @@
 use <math.scad>
 include <constants.scad>
 
+
+/* [Hidden] */
+
 $fa = 1;
 $fs = 0.4;
 

@@ -21,12 +21,11 @@ use <BOSL/math.scad>
 use <BOSL/shapes.scad>
 include <BOSL/constants.scad>
 
+
 /* [Hidden] */
 
 $fa = 1;
 $fs = 0.4;
-
-text_size_factor = 0.7;
 
 //////////////////////////
 // Template Components
