@@ -1,11 +1,16 @@
-use <math.scad>
-
 /* [Hidden] */
+
+// All quantities within the library are in millimeters and are only
+// converted to other units for input and output.
+INCH_TO_MM = 25.4;
+UNIT_OF_MILLIMETERS = 0;
+UNIT_OF_DECIMAL_INCHES = 1;
+UNIT_OF_FRACTIONAL_INCHES = 2;
 
 // The standard size of router bit and guide bearings assumed by the
 // labels on the original PantoRouter templates.
-std_inner_bit = to_millimeters(0.5);
-std_outer_bit = to_millimeters(0.5);
+std_inner_bit = 0.5 * INCH_TO_MM;
+std_outer_bit = 0.5 * INCH_TO_MM;
 std_inner_guide_bearing = 10;
 std_outer_guide_bearing = 22;
 

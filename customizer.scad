@@ -1,4 +1,5 @@
 use <math.scad>
+include <constants.scad>
 use <templates.scad>
 use <accessories.scad>
 use <calibration.scad>
@@ -11,7 +12,7 @@ Inner_Bit = 0.375; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/1
 Outer_Bit = 0.5; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
 Inner_Guide_Bearing = 10;   // [6:6 mm, 10:10 mm, 12:12 mm, 15:15 mm, 22:22 mm, 35:35 mm, 48:48 mm]
 Outer_Guide_Bearing = 15;   // [6:6 mm, 10:10 mm, 12:12 mm, 15:15 mm, 22:22 mm, 35:35 mm, 48:48 mm]
-Label_Units = "f";  // [d:Decimal Inches, f:Fractional Inches, m:Millimeters]
+Label_Units = 2;  // [0:Millimeters, 1:Decimal Inches, 2:Fractional Inches]
 Registration_Tabs = true;
 
 /* [ Mortise And Tenon Template ] */
@@ -84,3 +85,4 @@ if (Template == "Dowel") {
 } else {
     calibration_piece();
 }
+

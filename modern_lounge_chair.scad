@@ -23,7 +23,7 @@ inner_guide_bearing=10;
 outer_guide_bearing=10;
 inner_bit = to_millimeters(1/4);
 outer_bit = to_millimeters(1/2);
-label_units = "f";
+label_units = UNIT_OF_FRACTIONAL_INCHES;
 extra_label_text = "MODERN LOUNGE CHAIR";
 
 
@@ -102,7 +102,7 @@ module modern_lounge_chair_template_b(
 
     mt_size_label_text = mt_size_text(mortise_width1, mortise_thickness, vertical_p, label_units);
     settings_label_text = settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
-    distance_label_text = str(">", from_value_with_units(distance, label_units), "< ", left_p ? "LEFT" : "RIGHT");
+    distance_label_text = str(">", as_value_with_units(distance, label_units), "< ", left_p ? "LEFT" : "RIGHT");
     
     complete_template_b(angle,
         width=base_width,

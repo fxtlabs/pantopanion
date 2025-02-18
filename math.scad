@@ -1,12 +1,10 @@
 // Math functions
 
 use <BOSL/math.scad>
+include <constants.scad>
 
 
 /* [Hidden] */
-
-INCH_TO_MM = 25.4;
-
 
 // Given the radius of a circle (or cylinder), return a new radius that would
 // yield a polygonal approximation that circumscribes the original circle.
@@ -38,6 +36,18 @@ function to_mixed_number(value, max_denominator=64) =
         factor = gcd(numerator, denominator)
     )
         [whole, (factor > 0 ? [numerator / factor, denominator / factor] : [0, 1] )];
+
+
+// Given a fraction in the form [numerator, denominator], it returns its
+// value as a native Number (or undef if the denominator == 0.
+function from_fraction(value) =
+    value[1] != undef ? value[0] / value[1] : undef;
+
+
+// Given a mixed number in the form [whole_number, [numerator, denominator]],
+// it returns its value as a native Number.
+function from_mixed_number(value) =
+    value[0] + (value[1] != undef ? from_fraction(value[1]) : 0);
 
 
 // It converts a value from millimeters to inches.
@@ -78,13 +88,12 @@ function as_fractional_inches(value) =
             "\"");
 
 
-// Given a fraction in the form [numerator, denominator], it returns its
-// value as a native Number (or undef if the denominator == 0.
-function from_fraction(value) =
-    value[1] != undef ? value[0] / value[1] : undef;
-
-
-// Given a mixed number in the form [whole_number, [numerator, denominator]],
-// it returns its value as a native Number.
-function from_mixed_number(value) =
-    value[0] + (value[1] != undef ? from_fraction(value[1]) : 0);
+// Given a value in millimeters, it converts it to the specified units
+// and returns it as a string.
+// (E.g. 2.54, UNIT_OF_INCHES => "1\"")
+function as_value_with_units(value, units) =
+    units == UNIT_OF_DECIMAL_INCHES ?
+        as_decimal_inches(to_inches(value)) :
+        (units == UNIT_OF_FRACTIONAL_INCHES ?
+            as_fractional_inches(to_inches(value)) :
+            as_millimeters(value));

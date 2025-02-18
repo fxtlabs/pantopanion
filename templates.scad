@@ -13,7 +13,6 @@
 //   mortise slot
 // - Create a parametric spacer to enable proper spacing and centering
 //   of double M&Ts (vertical orientation)
-// - Haunched mortise and tenon
 
 use <math.scad>
 include <constants.scad>
@@ -27,6 +26,7 @@ include <BOSL/constants.scad>
 $fa = 1;
 $fs = 0.4;
 
+
 //////////////////////////
 // Template Components
 //////////////////////////
@@ -35,6 +35,12 @@ $fs = 0.4;
 module center_hole() {
     radius = circumscribed(center_hole_diameter / 2) + hole_radius_adjust;
     cylinder(h=template_height*2, r=radius, center=true);
+}
+
+
+module center_hole_clearance() {
+    side = center_hole_diameter + 2 * registration_tab_spacer;
+    cube([side, side, 2*template_height], center=true);
 }
 
 
@@ -48,12 +54,6 @@ module screw_hole() {
         translate([0, 0, base_height - countersink_height + eps])
             cylinder(countersink_height, r1=0, r2=countersink_radius, center=false);
     }
-}
-
-
-module center_hole_clearance() {
-    side = center_hole_diameter + 2 * registration_tab_spacer;
-    cube([side, side, 2*template_height], center=true);
 }
 
 
@@ -114,6 +114,8 @@ module position_holes(width, thickness, vertical_p) {
 }
 
 
+// This center mark will work well on tapered templates, but not so well
+// on templates that use a base plate.
 module center_mark() {
     size = 2 * center_mark_height;
     rotate([0, 0, 45]) cube(size, center=true);
@@ -156,13 +158,6 @@ module registration_tabs(base_width, base_thickness, vertical_p=false) {
     }
 }
 
-
-function from_value_with_units(value, units) =
-    units == "d" ?
-        as_decimal_inches(to_inches(value)) :
-        (units == "f" ?
-            as_fractional_inches(to_inches(value)) :
-            as_millimeters(value));
 
 function settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit) =
     let (
@@ -332,9 +327,9 @@ module mortise_part(height,width, thickness, radius) {
 
 function mt_size_text(mortise_width, mortise_thickness, vertical_p, label_units) =
     str(
-        from_value_with_units(mortise_width, label_units),
+        as_value_with_units(mortise_width, label_units),
         "\u00d7", // Unicode for vertically centered x
-        from_value_with_units(mortise_thickness, label_units),
+        as_value_with_units(mortise_thickness, label_units),
         (vertical_p ? "-V" : "")
     );
 
@@ -530,7 +525,7 @@ module double_mt_template(
 
     mt_size_label_text = mt_size_text(mortise_width, mortise_thickness, vertical_p, label_units);
     settings_label_text = settings_text(inner_guide_bearing, outer_guide_bearing, inner_bit, outer_bit);
-    distance_label_text = str(">", from_value_with_units(distance, label_units), "<");
+    distance_label_text = str(">", as_value_with_units(distance, label_units), "<");
     custom_label_text = extra_label_text == undef ? "" : extra_label_text;
     
     complete_template(
@@ -595,9 +590,9 @@ module std_mt_spacer_template(distance) {
             translate([track_spacing, 0, 0]) screw_hole();
             translate([-track_spacing, 0, 0]) screw_hole();
             translate([0, -distance, 0])
-                std_mt_template(mortise_width=2*track_spacing, vertical_p=true, label_units="f", registration_tabs_p=false);
+                std_mt_template(mortise_width=2*track_spacing, vertical_p=true, label_units=UNIT_OF_FRACTIONAL_INCHES, registration_tabs_p=false);
             translate([0, distance, 0])
-                std_mt_template(mortise_width=2*track_spacing, vertical_p=true, label_units="f", registration_tabs_p=false);
+                std_mt_template(mortise_width=2*track_spacing, vertical_p=true, label_units=UNIT_OF_FRACTIONAL_INCHES, registration_tabs_p=false);
         }
         translate([0, 0, spacer_height/2+eps])
             cube([(flange_radius+track_spacing)*2+eps, distance*2, spacer_height], center=true);
@@ -611,8 +606,9 @@ module std_mt_spacer_template(distance) {
 
 
 function dowel_size_text(diameter, units) =
-    str( "ø", from_value_with_units(diameter, units)); // Unicode \u2300 for diameter symbol does not work
-   
+    str( "ø", as_value_with_units(diameter, units)); // Unicode \u2300 for diameter symbol does not work
+
+
 module dowel_label(label_text, top, bottom) {
     n_chars = len(label_text);
     if (n_chars > 0) {
@@ -636,6 +632,7 @@ module dowel_label(label_text, top, bottom) {
         }
     }
 }   
+
 
 module dowel_template(
     dowel_diameter,
@@ -684,6 +681,7 @@ module dowel_template(
         }
     }
 }
+
 
 module std_dowel_template(registration_tabs_p=true) {
     top_outer_diameter = 27; // measured
