@@ -73,7 +73,7 @@ module tenon_stop(clearance, stop_width, stop_height) {
                 offset(r=radius)
                     square([(spacer_height+stop_height)-2*radius, stop_width-2*radius], center=true);
             // Registration tabs
-            translate([stop_height/2, 0, stop_thickness+clearance+tab_protrusion/2+eps]) {
+            translate([stop_height/2, 0, stop_thickness+clearance+tab_protrusion/2-eps]) {
                 translate([0, (tab_width+t_bolt_head_clearance)/2, 0])
                     cube([tab_thickness, tab_width, tab_protrusion+2*eps], center=true);
                 translate([0, -(tab_width+t_bolt_head_clearance)/2, 0])
