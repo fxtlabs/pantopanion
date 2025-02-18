@@ -20,6 +20,8 @@ T_Bolt_Size = 1.5;  // [1.0:"1/4-20 x 1\"", 1.5:"1/4-20 x 1.5\"", 2.0:"1/4-20 x 
 $fa = 1;
 $fs = 0.4;
 
+tenon_stop_thickness = 6;
+
 
 // Use this accessory through the centering hole from the back of the
 // template holder to center templates that have a screw hole in place
@@ -53,14 +55,16 @@ module centering_pin() {
 // to the edge of the PantoRouter table. The maximum clearance available
 // for routing a tenon is set by the length of the T-Bolt.
 module tenon_stop(clearance, stop_width, stop_height) {
-    stop_thickness = 6;
+    stop_thickness = tenon_stop_thickness;
     spacer_height = 28;
     radius = 5;
     t_bolt_hole = circumscribed(7);
     t_bolt_head = 18;
     t_bolt_head_clearance = t_bolt_head + 2 * 2;
     tab_protrusion = 2;
-    tab_thickness = 8.4;
+    tab_thickness = 8.2;
+    tab_margin = 2;
+    tab_width = (stop_width - t_bolt_head_clearance) / 2 - tab_margin;
     
     difference() {
         union() {
@@ -69,11 +73,12 @@ module tenon_stop(clearance, stop_width, stop_height) {
                 offset(r=radius)
                     square([(spacer_height+stop_height)-2*radius, stop_width-2*radius], center=true);
             // Registration tabs
-            translate([stop_height/2, 0, stop_thickness+clearance+tab_protrusion/2+eps])
-                difference() {
-                    cube([tab_thickness, stop_width, tab_protrusion+eps], center=true);
-                    cube([tab_thickness+2*eps, t_bolt_head_clearance, tab_protrusion+4*eps], center=true);
-                }
+            translate([stop_height/2, 0, stop_thickness+clearance+tab_protrusion/2+eps]) {
+                translate([0, (tab_width+t_bolt_head_clearance)/2, 0])
+                    cube([tab_thickness, tab_width, tab_protrusion+2*eps], center=true);
+                translate([0, -(tab_width+t_bolt_head_clearance)/2, 0])
+                    cube([tab_thickness, tab_width, tab_protrusion+2*eps], center=true);
+            }
         }
         // Clearance
         translate([-(spacer_height+eps)/2, 0, stop_thickness+(clearance+2*eps)/2])
@@ -86,13 +91,18 @@ module tenon_stop(clearance, stop_width, stop_height) {
 }
 
 
+function bolt_length_to_clearance(length) =
+    let (
+        nut_height = 10,
+        track_lip = 2
+    ) to_millimeters(length)-tenon_stop_thickness-nut_height-track_lip;
+
+
 if (Accessory == "Centering Pin") {
     centering_pin();
 } else if (Accessory == "Tenon Stop") {
-    nut_height = 8;
-    track_lip = 2;
     tenon_stop(
-        clearance=to_millimeters(T_Bolt_Size)-nut_height-track_lip,
+        clearance=bolt_length_to_clearance(T_Bolt_Size),
         stop_width=Stop_Size,
         stop_height=Stop_Size/2
     );
