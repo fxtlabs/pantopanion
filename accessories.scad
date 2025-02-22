@@ -6,7 +6,7 @@ include <constants.scad>
 
 // Customizable parameters
 
-Accessory = "Centering Pin"; // ["Centering Pin", "Tenon Stop"]
+Accessory = "Centering Pin"; // ["Centering Pin", "Tenon Stop", "Hose Adapter"]
 
 /* [ Tenon Stop ] */
 
@@ -91,6 +91,31 @@ module tenon_stop(clearance, stop_width, stop_height) {
 }
 
 
+// This adapter connects the PantoRouter dust collection hose (1-3/4"
+// outer diameter) to a standard 2-1/4" OD hose, fitting over both.
+module hose_adapter() {
+    ax = 45.1/2;
+    bx = 44.6/2;
+    cx = 57.5/2;
+    dx = 58/2;
+    ay = 0;
+    by = 36;
+    cy = by + 10;
+    dy = cy + 36;
+    t = 3;
+    rotate_extrude(convexity=4) polygon([
+        [ax,ay],
+        [bx,by],
+        [cx,cy],
+        [dx,dy],
+        [dx+t,dy],
+        [cx+t,cy],
+        [bx+t,by],
+        [ax+t,ay]
+    ]);
+}
+
+
 function bolt_length_to_clearance(length) =
     let (
         nut_height = 10,
@@ -106,4 +131,6 @@ if (Accessory == "Centering Pin") {
         stop_width=Stop_Size,
         stop_height=Stop_Size/2
     );
+} else if (Accessory == "Hose Adapter") {
+    hose_adapter();
 }
