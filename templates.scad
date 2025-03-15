@@ -51,8 +51,12 @@ module screw_hole() {
     screw_hole_radius = circumscribed(screw_hole_diameter / 2) + hole_radius_adjust;
     union() {
         cylinder(h=template_height*2, r=screw_hole_radius, center=true);
-        translate([0, 0, base_height - countersink_height + eps])
-            cylinder(countersink_height, r1=0, r2=countersink_radius, center=false);
+        hull() {
+            translate([0, 0, template_height])
+                cylinder(template_height, r=countersink_radius, center=false);
+            translate([0, 0, base_height - countersink_height + eps])
+                cylinder(countersink_height, r1=0, r2=countersink_radius, center=false);
+        }
     }
 }
 
@@ -296,7 +300,7 @@ module tenon_part(height, width, thickness, radius) {
 }
 
 
-module mortise_part(height,width, thickness, radius) {
+module mortise_part(height, width, thickness, radius) {
     step_height = height / n_mortise_steps;
     offset = max(width / 2 - radius, 0);
     dy = thickness / 2 - radius;
@@ -705,6 +709,116 @@ module std_dowel_template(registration_tabs_p=true) {
 
             center_marks(width=bottom_outer_diameter, thickness=bottom_outer_diameter, vertical_p=false);
         }
+    }
+}
+
+
+//////////////////////////
+// Specialty Templates
+//////////////////////////
+
+
+module position_hanger_holes(width) {
+    // The screw holes are offset so they do not disturb the deeper
+    // part of the template
+    min_wall_distance = 1;
+    dy = (width - screw_countersink_diameter) / 2 - min_wall_distance;
+    union() {
+        children(0);
+        translate([-track_spacing, -dy, 0]) children(1);
+        translate([track_spacing, dy, 0]) children(1);
+    }
+}
+
+
+// Slot template for Paulin Single Keyhole Bracket Hanger sold
+// by The Home Depot
+module keyhole_hanger_slot_template(registration_tabs_p=true) {
+    bit_diameter = to_millimeters(3/8);
+    guide_bearing = 10;
+    hanger_length = 42;
+    hanger_width = 16;
+    keyhole_length = 20;
+    keyhole_width = bit_diameter;
+
+    padding = 8;
+    
+    outer_length = (hanger_length - bit_diameter) * 2 + guide_bearing;
+    outer_width = (hanger_width - bit_diameter) * 2 + guide_bearing;
+    outer_radius = circumscribed(outer_width / 2);
+    inner_length = (keyhole_length - bit_diameter) * 2 + guide_bearing;
+    inner_width = (keyhole_width - bit_diameter) * 2 + guide_bearing;
+    inner_radius = circumscribed(inner_width / 2);
+    box_length = outer_length + padding * 2;
+    box_width = outer_width + padding * 2;
+
+    difference() {
+        // The container
+        translate([0, 0, template_height / 2])
+            cube([box_length, box_width, template_height], center=true);
+
+        // The slot providing clearance for the screw head
+        translate([0, 0, base_height + template_height / 2])
+            intersection() {
+                hull() {
+                    translate([-(inner_length - inner_width) / 2, 0, 0])
+                        cylinder(h=template_height, r=inner_radius, center=true);
+                    translate([(inner_length - inner_width) / 2, 0, 0])
+                        cylinder(h=template_height, r=inner_radius, center=true);
+                }
+                cube([inner_length + eps, inner_width, template_height + eps], center=true);
+            }
+
+        // The slot for the recessed keyhole hanger proper
+        translate([0, 0, base_height * 2 + template_height / 2])
+            intersection() {
+                hull() {
+                    translate([-(outer_length - outer_width) / 2, 0, 0])
+                        cylinder(h=template_height, r=outer_radius, center=true);
+                    translate([(outer_length - outer_width) / 2, 0, 0])
+                        cylinder(h=template_height, r=outer_radius, center=true);
+                }
+                cube([outer_length + eps, outer_width, template_height + eps], center=true);
+            }  
+        position_hanger_holes(outer_width) {
+            center_hole();
+            screw_hole();
+        }
+
+        // Recesses for the registration tabs
+        difference() {
+            registration_tabs(box_length, box_width, vertical_p=true);
+            position_hanger_holes(outer_width) {
+                center_hole_clearance();
+                screw_hole_clearance();
+            }
+        }        
+    }
+    
+    // Labels
+    label_bounds = mt_label_bounds(
+        outer_width=box_length,
+        outer_thickness=box_width,
+        outer_radius=0,
+        inner_thickness=outer_width);
+    top_label_t = str("3/8\"•", guide_bearing, "mm");
+    bottom_label_t = "KEYHOLE HANGER";
+    label_dy = (box_width - outer_width) / 4 + outer_width / 2;
+    translate([0, label_dy, template_height])
+        label_part(top_label_t, label_bounds);
+    translate([0, -label_dy, template_height])
+        label_part(bottom_label_t, label_bounds);
+
+    // Registration tabs (placed next to the template for printing)
+    if (registration_tabs_p) {
+        translate([0, (box_width + (box_width - 2 * registration_tab_spacer)) / 2 + registration_tab_spacer, registration_tab_protrusion])
+            difference() {
+                registration_tabs(box_length, box_width, true);
+                position_hanger_holes(outer_width) {
+                    center_hole_clearance();
+                    screw_hole_clearance();
+                }
+            }
     }
 }
 

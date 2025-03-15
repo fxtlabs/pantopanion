@@ -6,7 +6,7 @@ use <calibration.scad>
 
 // Customizable parameters
 
-Template = "M&T"; // ["Dowel", "M&T", "Std Dowel", "Std M&T", "Double M&T", "Std M&T Spacer", "Centering Pin", "Calibration"]
+Template = "M&T"; // ["Dowel", "M&T", "Std Dowel", "Std M&T", "Double M&T", "Keyhole Hanger", "Std M&T Spacer", "Centering Pin", "Calibration"]
 
 Inner_Bit = 0.375; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
 Outer_Bit = 0.5; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
@@ -46,7 +46,8 @@ if (Template == "Dowel") {
         outer_guide_bearing=Outer_Guide_Bearing,
         inner_bit=to_millimeters(Inner_Bit),
         outer_bit=to_millimeters(Outer_Bit),
-        label_units=Label_Units);
+        label_units=Label_Units,
+        registration_tabs_p=Registration_Tabs);
 } else if(Template == "M&T") {
     mt_template(
         mortise_width=to_millimeters(Mortise_Width),
@@ -57,7 +58,8 @@ if (Template == "Dowel") {
         inner_bit=to_millimeters(Inner_Bit),
         outer_bit=to_millimeters(Outer_Bit),
         vertical_p=(Orientation == "V" ? true : false),
-        label_units=Label_Units);
+        label_units=Label_Units,
+        registration_tabs_p=Registration_Tabs);
 } else if(Template == "Double M&T") {
     double_mt_template(
         distance=to_millimeters(Mortises_Spacing),
@@ -69,15 +71,19 @@ if (Template == "Dowel") {
         inner_bit=to_millimeters(Inner_Bit),
         outer_bit=to_millimeters(Outer_Bit),
         vertical_p=(Orientation == "V" ? true : false),
-        label_units=Label_Units);
+        label_units=Label_Units,
+        registration_tabs_p=Registration_Tabs);
 } else if (Template == "Std Dowel") {
-    std_dowel_template();
+    std_dowel_template(registration_tabs_p=Registration_Tabs);
 } else if (Template == "Std M&T") {
     std_mt_template(
         mortise_width=to_millimeters(Mortise_Width),
         vertical_p=(Orientation == "V" ? true : false),
         label_units=Label_Units,
+        registration_tabs_p=Registration_Tabs
     );
+} else if (Template == "Keyhole Hanger") {
+    keyhole_hanger_slot_template(registration_tabs_p=Registration_Tabs);
 } else if (Template == "Std M&T Spacer") {
     std_mt_spacer_template(distance=to_millimeters(Mortises_Spacing));
 } else if (Template == "Centering Pin") {
