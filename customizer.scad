@@ -6,7 +6,7 @@ use <calibration.scad>
 
 // Customizable parameters
 
-Template = "M&T"; // ["Dowel", "M&T", "Std Dowel", "Std M&T", "Double M&T", "Keyhole Hanger", "Std M&T Spacer", "Centering Pin", "Calibration"]
+Template = "M&T"; // ["Dowel", "M&T", "Std Dowel", "Std M&T", "Double M&T", "Keyhole Hanger", "Bow Tie", "Std M&T Spacer", "Centering Pin", "Calibration"]
 
 Inner_Bit = 0.375; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
 Outer_Bit = 0.5; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
@@ -84,6 +84,8 @@ if (Template == "Dowel") {
     );
 } else if (Template == "Keyhole Hanger") {
     keyhole_hanger_slot_template(registration_tabs_p=Registration_Tabs);
+} else if (Template == "Bow Tie") {
+    bow_tie_template(to_millimeters(5), to_millimeters(1.5), to_millimeters(0.75), bottom_label_text="5\"•1-1/2\"•3/4\"", registration_tabs_p=Registration_Tabs);
 } else if (Template == "Std M&T Spacer") {
     std_mt_spacer_template(distance=to_millimeters(Mortises_Spacing));
 } else if (Template == "Centering Pin") {

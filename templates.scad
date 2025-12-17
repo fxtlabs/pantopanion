@@ -822,3 +822,109 @@ module keyhole_hanger_slot_template(registration_tabs_p=true) {
     }
 }
 
+
+module bow_tie(width, max_height, min_height) {  
+    end_radius = max_height / 2;
+    end_offset = width / 2 - end_radius;
+    dip_height = min_height / 2;
+    ext_radius = (end_offset * end_offset + dip_height * dip_height - end_radius * end_radius) / (2 * (end_radius - dip_height));
+    ext_offset = ext_radius + dip_height;
+    difference() {
+        union() {
+            translate([-end_offset, 0])
+                circle(r=end_radius);
+            translate([end_offset, 0])
+                circle(r=end_radius);
+            polygon(points=[[-end_offset, 0], [0, -ext_offset], [end_offset, 0], [0, ext_offset]]);
+        }
+        translate([0, -ext_offset])
+            circle(r=ext_radius);
+        translate([0, ext_offset])
+            circle(r=ext_radius);
+    }
+}
+
+
+module position_bow_tie_holes(length, max_width) {
+    // The screw holes are offset so they do not disturb the deeper
+    // part of the template
+    dx = (length - max_width) / 2;
+    union() {
+        children(0);
+        translate([-dx, 0, 0]) children(1);
+        translate([dx, 0, 0]) children(1);
+    }
+}
+
+
+module bow_tie_template(length, max_width, min_width, bottom_label_text=undef, registration_tabs_p=true) {
+    bit_diameter = to_millimeters(1/2);
+    guide_bearing = 10;
+
+    padding = 8;
+    
+    inner_length = (length - bit_diameter) * 2 + guide_bearing;
+    inner_max_width = (max_width - bit_diameter) * 2 + guide_bearing;
+    inner_min_width = (min_width - bit_diameter) * 2 + guide_bearing;
+    box_length = inner_length + padding * 2;
+    box_width = inner_max_width + padding * 2;
+
+    difference() {
+        // The container
+        translate([0, 0, template_height / 2])
+            hull() {
+                translate([-(box_length - box_width) / 2, 0, 0])
+                    cylinder(h=template_height, d=box_width, center=true);
+                translate([(box_length - box_width) / 2, 0, 0])
+                    cylinder(h=template_height, d=box_width, center=true);
+            }
+
+        // The bow tie
+        translate([0, 0, base_height])
+            linear_extrude(h=template_height)
+                bow_tie(inner_length, inner_max_width, inner_min_width);
+
+        position_bow_tie_holes(inner_length, inner_max_width) {
+            center_hole();
+            screw_hole();
+        }
+
+        // Recesses for the registration tabs
+        difference() {
+            registration_tabs(box_length, box_width, vertical_p=false);
+            position_bow_tie_holes(inner_length, inner_max_width) {
+                center_hole_clearance();
+                screw_hole_clearance();
+            }
+        }        
+    }
+
+    // Labels
+    label_bounds = mt_label_bounds(
+        outer_width=inner_length - inner_max_width * 2,
+        outer_thickness=box_width,
+        outer_radius=0,
+        inner_thickness=(inner_max_width + inner_min_width) / 2);
+    top_label_t = str("1/2\"•", guide_bearing, "mm");
+    bottom_label_t = bottom_label_text == undef ? "BOW TIE" : bottom_label_text;
+    label_dy = (box_width - inner_min_width) / 4 + inner_min_width / 2;
+    translate([0, label_dy, template_height])
+        label_part(top_label_t, label_bounds);
+    translate([0, -label_dy, template_height])
+        label_part(bottom_label_t, label_bounds);
+
+    // Registration tabs (placed next to the template for printing)
+    if (registration_tabs_p) {
+        translate([0, (box_width + (box_width - 2 * registration_tab_spacer)) / 2 + registration_tab_spacer, registration_tab_protrusion])
+            difference() {
+                registration_tabs(box_length, box_width, false);
+                position_bow_tie_holes(inner_length, inner_max_width) {
+                    center_hole_clearance();
+                    screw_hole_clearance();
+                }
+            }
+    }
+}
+
+
+
