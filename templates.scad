@@ -931,7 +931,7 @@ module dovetail(max_width, length, angle) {
 
     ax = max_width / 2;
     ay = -length / 2;
-    bx = ax - sin(angle) * length;
+    bx = ax - tan(angle) * length;
     by = -ay;
     polygon([[ax, ay], [bx, by], [-bx, by], [-ax, ay]]);
 }
@@ -947,13 +947,13 @@ module half_blind_dovetail_template(max_width, angle, registration_tabs_p=true) 
     inner_width = (max_width - bit_diameter) * 2 + guide_bearing;
     inner_thickness = (dovetail_length - bit_diameter) * 2 + guide_bearing;
     box_thickness = inner_thickness + padding * 2;
-    box_width = inner_width + padding * 2 - sin(angle) * box_thickness;
+    box_width = inner_width + padding * 2 - tan(angle) * box_thickness;
  
 
     complete_template(
         outer_width=box_width,
         outer_thickness=box_thickness,
-        inner_width=inner_width - 2 * taper - sin(angle) * inner_thickness,
+        inner_width=inner_width - 2 * taper - tan(angle) * inner_thickness,
         inner_thickness=inner_thickness,
         vertical_p=false,
         registration_tabs_p=registration_tabs_p
