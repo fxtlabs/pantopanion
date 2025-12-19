@@ -946,8 +946,9 @@ module half_blind_dovetail_template(max_width, angle, registration_tabs_p=true) 
 
     inner_width = (max_width - bit_diameter) * 2 + guide_bearing;
     inner_thickness = (dovetail_length - bit_diameter) * 2 + guide_bearing;
-    box_width = inner_width + padding * 2;
     box_thickness = inner_thickness + padding * 2;
+    box_width = inner_width + padding * 2 - sin(angle) * box_thickness;
+ 
 
     complete_template(
         outer_width=box_width,
