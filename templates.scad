@@ -927,4 +927,72 @@ module bow_tie_template(length, max_width, min_width, bottom_label_text=undef, r
 }
 
 
+module dovetail(max_width, length, angle) {
+
+    ax = max_width / 2;
+    ay = -length / 2;
+    bx = ax - sin(angle) * length;
+    by = -ay;
+    polygon([[ax, ay], [bx, by], [-bx, by], [-ax, ay]]);
+}
+
+
+module half_blind_dovetail_template(max_width, angle, registration_tabs_p=true) {
+    bit_diameter = to_millimeters(1/4);
+    guide_bearing = 10;
+    dovetail_length = to_millimeters(1); // temporary
+
+    padding = 10;
+
+    inner_width = (max_width - bit_diameter) * 2 + guide_bearing;
+    inner_thickness = (dovetail_length - bit_diameter) * 2 + guide_bearing;
+    box_width = inner_width + padding * 2;
+    box_thickness = inner_thickness + padding * 2;
+
+    complete_template(
+        outer_width=box_width,
+        outer_thickness=box_thickness,
+        inner_width=inner_width - 2 * taper - sin(angle) * inner_thickness,
+        inner_thickness=inner_thickness,
+        vertical_p=false,
+        registration_tabs_p=registration_tabs_p
+    ) {
+        union() {
+            difference() {
+                // The container
+                linear_extrude(height=template_height)
+                    offset(r=padding)
+                        dovetail(inner_width, inner_thickness, angle);
+
+                // The dovetail slot
+                translate([0, 0, base_height]) hull() {
+                    linear_extrude(height=1)
+                        offset(r=-taper/2)
+                            dovetail(inner_width, inner_thickness, angle);
+                    translate([0, 0, template_height - 1])
+                        linear_extrude(height=1)
+                            offset(r=taper/2)
+                                dovetail(inner_width, inner_thickness, angle);
+                }
+
+                // The slot through which the guide bearing enters the template
+                translate([0, (inner_thickness + padding) / 2, base_height + template_height / 2])
+                    cube([guide_bearing, padding * 2, template_height], center=true);
+            }
+            
+            // Labels
+            label_bounds = mt_label_bounds(
+                outer_width=box_width,
+                outer_thickness=box_thickness,
+                outer_radius=0,
+                inner_thickness=inner_thickness + taper);
+            bottom_label_t = str("1/4\"•", guide_bearing, "mm - ", max_width, "•", angle, "°");
+            label_dy = (box_thickness - inner_thickness) / 4 + inner_thickness / 2;
+            translate([0, -label_dy, template_height])
+                label_part(bottom_label_t, label_bounds);
+        }
+    }
+}
+
+
 

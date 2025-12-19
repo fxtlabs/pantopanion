@@ -6,7 +6,7 @@ use <calibration.scad>
 
 // Customizable parameters
 
-Template = "M&T"; // ["Dowel", "M&T", "Std Dowel", "Std M&T", "Double M&T", "Keyhole Hanger", "Bow Tie", "Std M&T Spacer", "Centering Pin", "Calibration"]
+Template = "M&T"; // ["Dowel", "M&T", "Std Dowel", "Std M&T", "Double M&T", "Keyhole Hanger", "Half Blind Dovetail", "Bow Tie", "Std M&T Spacer", "Centering Pin", "Calibration"]
 
 Inner_Bit = 0.375; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
 Outer_Bit = 0.5; // [0.125:"1/8\"", 0.1875:"3/16\"", 0.25:"1/4\"", 0.3125:"5/16\"", 0.375:"3/8\"", 0.5:"1/2\"", 0.75:"3/4\"", 1:"1\""]
@@ -33,6 +33,14 @@ Dowel_Diameter = 1; // [0.25:0.125:4]
 /* [ Mortise And Tenon Spacer Template ] */
 
 Mortises_Spacing = 1; // [0.75:0.0625:4]
+
+/* [ Half Blind Dovetail Template ] */
+
+// in inches
+Dovetail_Width = 1; // [0.875:0.125:3]
+
+// in degres
+Dovetail_Angle = 8; // [7, 8, 9, 15]
 
 /* [Hidden] */
 
@@ -84,6 +92,8 @@ if (Template == "Dowel") {
     );
 } else if (Template == "Keyhole Hanger") {
     keyhole_hanger_slot_template(registration_tabs_p=Registration_Tabs);
+} else if (Template == "Half Blind Dovetail") {
+    half_blind_dovetail_template(max_width=to_millimeters(Dovetail_Width), angle=Dovetail_Angle, registration_tabs_p=Registration_Tabs);
 } else if (Template == "Bow Tie") {
     bow_tie_template(to_millimeters(5), to_millimeters(1.5), to_millimeters(0.75), bottom_label_text="5\"•1-1/2\"•3/4\"", registration_tabs_p=Registration_Tabs);
 } else if (Template == "Std M&T Spacer") {
