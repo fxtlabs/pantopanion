@@ -12,8 +12,9 @@ Accessory = "Centering Pin"; // ["Centering Pin", "Tenon Stop", "Hose Adapter"]
 
 Stop_Size = 50;    // [50:Small, 75:Medium, 100:Large]
 
-T_Bolt_Size = 1.5;  // [1.0:"1/4-20 x 1\"", 1.5:"1/4-20 x 1.5\"", 2.0:"1/4-20 x 2\"", 2.5:"1/4-20 x 2.5\"", 3.0:"1/4-20 x 3\"", 3.5:"1/4-20 x 3.5\""]
+// T_Bolt_Size = 1.5;  // [1.0:"1/4-20 x 1\"", 1.5:"1/4-20 x 1.5\"", 2.0:"1/4-20 x 2\"", 2.5:"1/4-20 x 2.5\"", 3.0:"1/4-20 x 3\"", 3.5:"1/4-20 x 3.5\""]
 
+Clearance = 1;  // [0.75:"3/4\"", 1.0:"1\"", 1.25:"1-1/4\"", 1.5:"1-1/2\"", 1.75:"1-3/4\"", 2.0:"2\""]
 
 /* [Hidden] */
 
@@ -122,12 +123,12 @@ function bolt_length_to_clearance(length) =
         track_lip = 2
     ) to_millimeters(length)-tenon_stop_thickness-nut_height-track_lip;
 
-
 if (Accessory == "Centering Pin") {
     centering_pin();
 } else if (Accessory == "Tenon Stop") {
     tenon_stop(
-        clearance=bolt_length_to_clearance(T_Bolt_Size),
+        // clearance=bolt_length_to_clearance(T_Bolt_Size),
+        clearance=to_millimeters(Clearance),
         stop_width=Stop_Size,
         stop_height=Stop_Size/2
     );
