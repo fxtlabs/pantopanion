@@ -823,6 +823,8 @@ module keyhole_hanger_slot_template(registration_tabs_p=true) {
 }
 
 
+/*
+// This version uses an arc of a circle to connect the two outer circles.
 module bow_tie(width, max_height, min_height) {  
     end_radius = max_height / 2;
     end_offset = width / 2 - end_radius;
@@ -843,7 +845,32 @@ module bow_tie(width, max_height, min_height) {
             circle(r=ext_radius);
     }
 }
+*/
 
+// This version uses straight segments tangent to the outer circles and
+// rounds their meeting point using a "smoothing factor".
+// The "min_height" parameter is not fully respected and may be bigger
+// when using larger "smoothing_factor" values.
+module bow_tie(width, max_height, min_height, smoothing_factor=1.3) {
+    offset_r = -min_height * smoothing_factor; // fudge factor
+    end_radius = max_height / 2 - offset_r;
+    end_offset = width / 2 - end_radius - offset_r;
+    dip_height = min_height / 2 - offset_r;
+    offset(r=offset_r) {
+        union() {
+            hull() {
+                translate([-end_offset, 0]) circle(r=end_radius);
+                circle(r=dip_height);
+            }
+            hull() {
+                translate([end_offset, 0]) circle(r=end_radius);
+                circle(r=dip_height);
+            }
+        }
+    }
+}
+
+// bow_tie(to_millimeters(5.0), to_millimeters(1.75), to_millimeters(0.75), 1.3);
 
 module position_bow_tie_holes(length, max_width) {
     // The screw holes are offset so they do not disturb the deeper
@@ -857,7 +884,7 @@ module position_bow_tie_holes(length, max_width) {
 }
 
 
-module bow_tie_template(length, max_width, min_width, bottom_label_text=undef, registration_tabs_p=true) {
+module bow_tie_template(length, max_width, min_width, smoothing_factor, bottom_label_text=undef, registration_tabs_p=true) {
     bit_diameter = to_millimeters(1/2);
     guide_bearing = 10;
 
@@ -882,7 +909,7 @@ module bow_tie_template(length, max_width, min_width, bottom_label_text=undef, r
         // The bow tie
         translate([0, 0, base_height])
             linear_extrude(h=template_height)
-                bow_tie(inner_length, inner_max_width, inner_min_width);
+                bow_tie(inner_length, inner_max_width, inner_min_width, smoothing_factor);
 
         position_bow_tie_holes(inner_length, inner_max_width) {
             center_hole();
@@ -901,7 +928,7 @@ module bow_tie_template(length, max_width, min_width, bottom_label_text=undef, r
 
     // Labels
     label_bounds = mt_label_bounds(
-        outer_width=inner_length - inner_max_width * 2,
+        outer_width=inner_length - inner_max_width * 2.2,
         outer_thickness=box_width,
         outer_radius=0,
         inner_thickness=(inner_max_width + inner_min_width) / 2);
@@ -912,7 +939,7 @@ module bow_tie_template(length, max_width, min_width, bottom_label_text=undef, r
         label_part(top_label_t, label_bounds);
     translate([0, -label_dy, template_height])
         label_part(bottom_label_t, label_bounds);
-
+ 
     // Registration tabs (placed next to the template for printing)
     if (registration_tabs_p) {
         translate([0, (box_width + (box_width - 2 * registration_tab_spacer)) / 2 + registration_tab_spacer, registration_tab_protrusion])

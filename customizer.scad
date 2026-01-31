@@ -95,7 +95,7 @@ if (Template == "Dowel") {
 } else if (Template == "Half Blind Dovetail") {
     half_blind_dovetail_template(max_width=to_millimeters(Dovetail_Width), angle=Dovetail_Angle, registration_tabs_p=Registration_Tabs);
 } else if (Template == "Bow Tie") {
-    bow_tie_template(to_millimeters(5), to_millimeters(1.5), to_millimeters(0.75), bottom_label_text="5\"•1-1/2\"•3/4\"", registration_tabs_p=Registration_Tabs);
+    bow_tie_template(to_millimeters(5), to_millimeters(1.75), to_millimeters(0.75), 1.3, bottom_label_text="5\"•1-3/4\"•3/4\"•1.3", registration_tabs_p=Registration_Tabs);
 } else if (Template == "Std M&T Spacer") {
     std_mt_spacer_template(distance=to_millimeters(Mortises_Spacing));
 } else if (Template == "Centering Pin") {
